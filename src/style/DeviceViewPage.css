@@ -1,0 +1,93 @@
+.device-view-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* 화면 전체 높이 */
+  background-color: #f0f0f0;
+}
+
+/* 헤더 */
+.device-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #ddd;
+}
+
+.back-button {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-decoration: none;
+  color: #333;
+}
+
+.device-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.logo {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #007bff; /* (임시) 로고 색상 */
+}
+
+/* 실시간 영상 영역 */
+.video-feed-wrapper {
+  flex-grow: 1; /* 헤더, 버튼 영역 제외한 모든 공간 차지 */
+  position: relative; /* 자식 요소(오버레이)의 기준점 */
+  background-color: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+.video-feed {
+  width: 100%;
+  height: 100%;
+  object-fit: cover; /* 영상이 꽉 차도록 설정 */
+}
+
+/* 영상 위 날짜/시간 오버레이 */
+.video-overlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  color: white;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+.video-overlay .date {
+  font-size: 1.2rem;
+  font-weight: bold;
+  display: block;
+}
+
+.video-overlay .time {
+  font-size: 0.9rem;
+  display: block;
+  margin-top: 5px;
+}
+
+/* 대화 시작 버튼 영역 */
+.action-area {
+  padding: 20px;
+  background-color: #ffffff;
+  box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+  margin-bottom: 70px; /* 하단 탭 높이만큼 띄우기 */
+}
+
+.start-conversation-button {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: white;
+  background-color: #007bff; /* (임시) 메인 색상 */
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+}

@@ -1,0 +1,97 @@
+.history-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #ffffff;
+  padding-bottom: 70px; /* 하단 탭 높이 */
+}
+
+/* 1. 헤더 */
+.history-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.history-header .logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #007bff; /* (임시) 로고 색상 */
+  margin-bottom: 10px;
+}
+
+.history-header .history-title {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+/* 2. 안내 문구 */
+.history-notice {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #888;
+  padding: 15px 20px 0;
+}
+
+/* 3. 대화 목록 리스트 */
+.history-list {
+  flex-grow: 1; /* 남은 공간을 채움 */
+  padding: 10px 20px;
+  overflow-y: auto; /* 내용이 많아지면 스크롤 */
+}
+
+.history-card {
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+
+.card-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #333;
+  margin: 0 0 5px 0;
+}
+
+.card-summary {
+  font-size: 0.95rem;
+  color: #555;
+  margin: 0 0 10px 0;
+}
+
+.card-time {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+/* 4. 페이지네이션 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 15px 0;
+}
+
+.page-num {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #555;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 5px 10px;
+  margin: 0 3px;
+  cursor: pointer;
+}
+
+.page-num.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}

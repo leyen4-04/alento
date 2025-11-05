@@ -1,0 +1,157 @@
+.manage-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f4f7f6; /* 약간의 배경색 */
+  padding-bottom: 70px; /* 하단 탭 높이 */
+}
+
+/* 1. 헤더 */
+.manage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #ddd;
+}
+
+.manage-header .logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #007bff; /* (임시) 로고 색상 */
+}
+
+.user-greeting {
+  font-size: 1.3rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+/* 공통 섹션 스타일 */
+.manage-section {
+  padding: 20px;
+  background-color: #ffffff;
+  margin-bottom: 10px; /* 섹션 사이 간격 */
+  border-bottom: 1px solid #eee;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 0 0 15px 0;
+}
+
+/* 2. 구독하기 버튼 */
+.subscribe-link-button {
+  display: block;
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: white;
+  background-color: #007bff; /* (임시) 메인 색상 */
+  border: none;
+  border-radius: 10px;
+  text-decoration: none;
+  text-align: center;
+  box-sizing: border-box; /* 패딩 포함 크기 계산 */
+}
+
+/* 3. 기기 관리 카드 */
+.device-card-manage {
+  background-color: #f0f6ff; /* PDF의 옅은 파란색 배경 */
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 15px;
+  border: 1px solid #d0e1ff;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.device-nickname {
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 0;
+  flex-grow: 1; /* 이름이 남은 공간 차지 */
+}
+
+.device-owner {
+  font-size: 0.9rem;
+  color: #555;
+  margin-right: 10px;
+}
+
+.arrow {
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #555;
+}
+
+.device-id {
+  font-size: 0.9rem;
+  color: #333;
+  margin: 0 0 5px 0;
+}
+
+.device-warranty {
+  font-size: 0.9rem;
+  color: #333;
+  margin: 0 0 15px 0;
+}
+
+.ai-notes-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  margin: 0 0 5px 0;
+}
+
+.ai-notes ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* 4. 생체 등록 카드 */
+.bio-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: #f0f6ff;
+  border-radius: 10px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  border: 1px solid #d0e1ff;
+}
+
+.avatar-placeholder {
+  width: 50px;
+  height: 50px;
+  background-color: #d0e1ff;
+  border-radius: 8px;
+}
+
+.bio-card .arrow {
+  margin-left: auto; /* 화살표를 오른쪽 끝으로 */
+}
+
+/* 공통 '추가' 버튼 */
+.add-button {
+  width: 100%;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+}

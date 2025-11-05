@@ -1,0 +1,63 @@
+.signup-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.signup-title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-bottom: 40px;
+}
+
+.signup-form {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.signup-input {
+  padding: 15px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1rem;
+}
+
+.terms-agreement {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+.terms-agreement input {
+  margin-right: 5px;
+}
+
+.signup-button {
+  padding: 15px;
+  background-color: #007bff; /* (임시) 디자인에 맞는 메인 색상으로 변경하세요 */
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.signup-links {
+  margin-top: 20px;
+  font-size: 0.9rem;
+}
+
+.signup-links a {
+  text-decoration: none;
+  color: #007bff; /* (임시) 링크 색상 */
+  font-weight: bold;
+}

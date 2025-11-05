@@ -1,0 +1,74 @@
+.main-container {
+  width: 100%;
+  min-height: 100vh;
+  padding-bottom: 80px; /* 하단 네비게이션 높이만큼 여백 */
+  box-sizing: border-box;
+}
+
+/* 1. 헤더 */
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.main-logo {
+  font-size: 1.8rem;
+  font-weight: bold;
+  margin: 0;
+  color: #007bff; /* (임시) 로고 색상 */
+}
+
+.login-link {
+  font-size: 0.9rem;
+  color: #555;
+  text-decoration: none;
+}
+
+/* 2. 구독 배너 */
+.subscription-banner {
+  background-color: #f0f8ff; /* (임시) 배너 배경색 */
+  padding: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #333;
+  line-height: 1.5;
+}
+
+.subscription-banner p {
+  margin: 0;
+}
+
+/* 3. 기기 목록 */
+.device-list-section {
+  padding: 20px;
+}
+
+.device-card {
+  display: block;
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  text-decoration: none;
+  color: inherit;
+  overflow: hidden; /* 이미지 모서리 둥글게 */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.device-thumbnail {
+  width: 100%;
+  height: 200px; /* 임시 높이 */
+  object-fit: cover; /* 이미지가 비율 맞게 채워지도록 */
+}
+
+.device-info {
+  padding: 15px;
+}
+
+.device-info h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}

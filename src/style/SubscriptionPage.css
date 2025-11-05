@@ -1,0 +1,112 @@
+.subscription-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f4f7f6; /* 약간의 배경색 */
+}
+
+/* 헤더 */
+.subscription-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #ddd;
+}
+
+.subscription-header .back-button {
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-decoration: none;
+  color: #333;
+}
+
+.subscription-header .subscription-title {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 0;
+}
+
+.subscription-header .placeholder {
+  width: 24px; /* back-button과 너비를 맞추기 위함 (대략) */
+}
+
+/* 구독 카드 래퍼 */
+.cards-wrapper {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px; /* 카드 사이 간격 */
+}
+
+.subscription-card {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 25px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+}
+
+/* 카드 제목 */
+.card-title {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0 0 10px 0;
+  color: #007bff; /* (임시) 개인용 색상 */
+}
+
+.subscription-card.business .card-title {
+  color: #28a745; /* (임시) 기업용 색상 */
+}
+
+/* 가격 정보 */
+.price-info {
+  margin-bottom: 20px;
+}
+
+.original-price {
+  font-size: 1rem;
+  color: #888;
+  text-decoration: line-through;
+  margin-right: 10px;
+}
+
+.discounted-price {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #333;
+}
+
+/* 특징 목록 */
+.feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 25px 0;
+  color: #555;
+  line-height: 1.6;
+}
+
+.feature-item {
+  font-size: 1rem;
+}
+
+/* 구독 버튼 */
+.subscribe-button {
+  width: 100%;
+  padding: 15px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: white;
+  background-color: #007bff; /* (임시) 개인용 색상 */
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: auto; /* 버튼을 카드 하단에 밀착 */
+}
+
+.subscription-card.business .subscribe-button {
+  background-color: #28a745; /* (임시) 기업용 색상 */
+}
