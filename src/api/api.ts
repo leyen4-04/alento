@@ -1,6 +1,7 @@
 // API 명세서에 명시된 기본 주소
-const BASE_URL = "http://192.168.100.2:8000";
-
+// 192.168.100.7이 맞는 주소라고 하셨으니, 이 주소를 사용합니다.
+// 만약 100.2가 맞다면 여기를 수정하세요.
+const BASE_URL = process.env.REACT_APP_API_URL || '';  //env v파일 주소
 // 1. localStorage에서 JWT 토큰 가져오기
 export const getAuthToken = (): string | null => {
   return localStorage.getItem("my_access_token");
@@ -25,8 +26,7 @@ export const setDeviceApiKey = (apiKey: string) => {
 };
 
 
-// 5. 기본 fetch 함수 (나중에 이걸로 모든 통신을 합니다)
-// 명세서의 예시처럼 fetch를 사용합니다.
+// 5. 기본 fetch 함수 (모든 통신은 이 함수를 통합니다)
 export const apiFetch = async (path: string, options: RequestInit = {}) => {
   const token = getAuthToken();
   const headers = { ...options.headers } as Record<string, string>;
@@ -56,11 +56,16 @@ export const apiFetch = async (path: string, options: RequestInit = {}) => {
   }
 
   // 성공 시 응답 반환
-  // /handle-visit 처럼 오디오 파일을 반환하는 경우 blob()을 사용해야 할 수 있습니다.
+  // /handle-visit 처럼 오디오 파일을 반환하는 경우 blob()을 사용
   if (response.headers.get("Content-Type")?.includes("audio/")) {
      return response.blob();
   }
   
+  // 204 No Content 처럼 응답 본문이 없는 경우
+  if (response.status === 204 || response.headers.get("Content-Length") === "0") {
+    return null; // 또는 { success: true } 같은 객체 반환
+  }
+
   // 대부분의 경우 JSON을 반환
   return response.json();
 };

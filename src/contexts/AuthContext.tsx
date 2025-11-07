@@ -1,6 +1,7 @@
-// 이 파일은 login, logout 함수와 현재 user 정보를 제공합니다.
+// 로그인과 로그아웃 함수와 현재 유저의 정보를 제공
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { apiFetch, setAuthToken, removeAuthToken, getAuthToken } from '../api/api';
+// [수정] api.ts 파일에서 import 하도록 변경
+import { apiFetch, setAuthToken, removeAuthToken, getAuthToken } from '../api/api'; 
 import { useNavigate } from 'react-router-dom';
 
 // 1. 유저 정보 타입 (API 명세서 GET /users/me 참고)
@@ -15,24 +16,23 @@ interface User {
 
 // 2. Context가 제공할 값들의 타입
 interface AuthContextType {
-  user: User | null;      // 현재 로그인된 유저 정보
-  token: string | null;   // 현재 JWT 토큰
-  isLoading: boolean;     // 로딩 중인지 여부 (앱 로딩 시 토큰 확인용)
+  user: User | null;
+  token: string | null;
+  isLoading: boolean;
   login: (email: string, pass: string) => Promise<void>;
   signUp: (email: string, pass: string, name: string) => Promise<void>;
   logout: () => void;
-  // (선택) 유저 정보 갱신 함수
   fetchUser: () => Promise<void>;
 }
 
 // 3. Context 생성
 const AuthContext = createContext<AuthContextType | null>(null);
 
-// 4. Provider 컴포넌트 (이걸로 App.tsx를 감쌀 것)
+// 4. Provider 컴포넌트
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(getAuthToken());
-  const [isLoading, setIsLoading] = useState(true); // 앱 첫 로드 시 true
+  const [isLoading, setIsLoading] = useState(true);
   
   const navigate = useNavigate();
 
@@ -41,11 +41,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const loadUserFromToken = async () => {
       if (token) {
         try {
-          // 토큰이 유효한지 확인하기 위해 /users/me 호출
           const userData = await apiFetch('/users/me');
           setUser(userData);
         } catch (error) {
-          // 토큰이 만료되었거나 유효하지 않음
           removeAuthToken();
           setToken(null);
           console.error("토큰으로 유저 정보 로드 실패:", error);
@@ -58,23 +56,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 로그인 함수 (POST /token)
   const login = async (email: string, pass: string) => {
-    // API 명세서에 /token은 application/x-www-form-urlencoded 라고 명시됨
     const body = new URLSearchParams();
     body.append("username", email);
     body.append("password", pass);
 
     const response = await apiFetch('/token', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: body,
     });
     
     setAuthToken(response.access_token);
     setToken(response.access_token);
-    // 로그인이 성공하면 토큰을 기반으로 유저 정보를 다시 불러옴
-    // (위의 useEffect가 [token] 변경에 의해 자동 실행됨)
+    // useEffect가 [token] 변경에 의해 자동 실행되어 유저 정보를 가져옴
   };
 
   // 회원가입 함수 (POST /users/signup)
@@ -85,11 +79,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       full_name: name
     });
     
+    // apiFetch가 자동으로 BASE_URL과 헤더를 설정해줍니다.
     await apiFetch('/users/signup', {
       method: 'POST',
       body: body,
     });
-    // 회원가입 성공 (보통 로그인 페이지로 이동시키거나 자동 로그인 처리)
+    // 회원가입 성공
   };
   
   // 로그아웃 함수
@@ -97,10 +92,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     removeAuthToken();
     setToken(null);
     setUser(null);
-    navigate('/login'); // 로그아웃 시 로그인 페이지로
+    navigate('/login');
   };
 
-  // 유저 정보 수동 갱신 (PATCH /users/me/status 이후 등)
+  // 유저 정보 수동 갱신
   const fetchUser = async () => {
      const userData = await apiFetch('/users/me');
      setUser(userData);
@@ -108,12 +103,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ user, token, isLoading, login, signUp, logout, fetchUser }}>
-      {!isLoading && children} {/* 로딩이 끝나면 앱을 보여줌 */}
+      {!isLoading && children}
     </AuthContext.Provider>
   );
 };
 
-// 5. Context를 쉽게 사용하기 위한 Custom Hook
+// 5. Custom Hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -121,3 +116,5 @@ export const useAuth = () => {
   }
   return context;
 };
+
+// [삭제] api.ts의 내용이 여기에 있으면 안 됩니다.
