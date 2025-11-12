@@ -91,3 +91,75 @@
   border-radius: 10px;
   cursor: pointer;
 }
+
+/* 방문 처리 테스트 영역 */
+.visit-test-area {
+  padding: 1.5rem;
+  background-color: #f0f0f0; /* 배경색 구분 */
+  border-top: 1px solid #ddd;
+  margin-bottom: 60px; /* BottomNav 높이만큼 여백 */
+}
+
+.test-title {
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 0.5rem;
+}
+
+.test-input-group {
+  margin-bottom: 1rem;
+}
+
+.test-input-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.test-input-group input[type="file"] {
+  width: 100%;
+}
+
+.test-upload-button {
+  width: 100%;
+  padding: 0.8rem;
+  font-size: 1rem;
+  font-weight: bold;
+  color: white;
+  background-color: #007bff; /* 테마에 맞는 색상으로 변경하세요 */
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.test-upload-button:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+
+.test-result {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  border-radius: 8px;
+}
+
+.test-result.error {
+  background-color: #ffe0e0;
+  color: #d8000c;
+  border: 1px solid #d8000c;
+}
+
+.test-result.success {
+  background-color: #e0ffe0;
+  color: #005200;
+  border: 1px solid #005200;
+}
+
+.test-result audio {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+

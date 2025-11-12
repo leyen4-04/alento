@@ -59,7 +59,7 @@ function LoginPage() {
 
   return (
     <div className="login-container">
-      <img src={"/Bell.png"} alt='picture1' height='60px' width='88px' />  
+      {/* <img src={"/Bell (1).png"} alt='picture1' height='60px' width='88px' />   */}
       <h1 className="login-title">ALERTO</h1>
      
       
@@ -70,15 +70,15 @@ function LoginPage() {
           className="login-input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-        />
-        <input 
+        /> 
+        <input
           type="password" 
           placeholder="비밀번호를 입력하세요" 
           className="login-input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-        />
         
+        />
         <div className="login-options">
           <input type="checkbox" id="keep-login" />
           <label htmlFor="keep-login">로그인 유지</label> 
