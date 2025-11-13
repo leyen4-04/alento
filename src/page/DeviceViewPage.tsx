@@ -11,6 +11,10 @@ const chatLog = [
   { speaker: "ai", text: "안녕하세요. 어느 택배사이신가요?" }
 ];
 
+// [신규] .env 변수 2개 가져오기
+const API_URL = process.env.REACT_APP_API_URL; // http://...
+const WS_URL = process.env.REACT_APP_WS_URL;   // ws://...
+
 function DeviceViewPage() {
   // URL의 :id 값을 가져옵니다. (예: /device/1 -> id는 '1')
   const { id } = useParams();
