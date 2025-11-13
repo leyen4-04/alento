@@ -33,7 +33,10 @@ function HistoryPage() {
       try {
         // 2. fetch에 'Authorization' 헤더 추가하여 API 호출
         // (참고: /visits/?skip=0&limit=20 처럼 파라미터를 넘겨 페이지네이션 구현 가능)
-        const response = await fetch("http://192.168.100.7:8000/visits/", {
+        const BASE_URL = process.env.REACT_APP_API_URL || '';
+
+        
+        const response = await fetch(`${BASE_URL}/visits/`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`

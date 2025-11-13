@@ -1,262 +1,288 @@
-// [수정] React에서 useState와 useEffect를 가져옵니다.
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import BottomNav from '../components/layout/BottomNav'; // 공통 하단 탭
-import '../style/ManagePage.css'; // 이 페이지 전용 CSS
-
-// PDF 11, 13페이지의 임시 데이터
-const userData = {
-  name: "홍길동",
-};
-
-const deviceData = {
-  nickname: "기기 별명",
-  id: "기기 고유 ID",
-  owner: "대표자 명",
-  warranty: "20xx - xx-xx까지",
-  aiNotes: [
-    "참고할 내용 1",
-    "참고할 내용 2",
-    "참고할 내용 3",
-  ]
-};
-
-// [신규] .env 변수 가져오기
-const BASE_URL = process.env.REACT_APP_API_URL;
-
+import BottomNav from '../components/layout/BottomNav'; 
+import '../style/ManagePage.css'; 
 
 function ManagePage() {
 
-  // [신규] API 데이터를 저장할 state들을 선언합니다.
-  const [userInfo, setUserInfo] = useState<any>(null); // 사용자 정보
-  const [loading, setLoading] = useState(true); // 로딩 상태
-  const [error, setError] = useState<string | null>(null); // 에러 메시지
+  const [deviceData, setDeviceData] = useState<any[]>([]);
 
-  // [신규] '내 상태 업데이트' (PATCH /users/me/status)를 위한 state
-  const [isHome, setIsHome] = useState(true);
-  const [returnTime, setReturnTime] = useState("");
-  const [memo, setMemo] = useState("");
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  // [신규] '기기 등록' (POST /devices/register)을 위한 state
+  const [editNickname, setEditNickname] = useState(""); 
+  const [editMemo, setEditMemo] = useState("");
+
+  const [registerModalOpen, setRegisterModalOpen] = useState(false);
+
   const [newDeviceName, setNewDeviceName] = useState("");
   const [newDeviceUid, setNewDeviceUid] = useState("");
-  const [registerError, setRegisterError] = useState<string | null>(null);
 
-  
-  // [신규] 1. 페이지가 처음 로드될 때 사용자 정보를 불러옵니다. (GET /users/me)
+  const [userInfo, setUserInfo] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const BASE_URL = process.env.REACT_APP_API_URL;
+
+  // ===============================================================
+  // ⭐ 사용자 정보 + 기기 목록 불러오기
+  // ===============================================================
   useEffect(() => {
-    const fetchUserInfo = async () => {
-      
-      // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-      // ★ 바로 이 부분입니다! (GET /users/me) ★
-      // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-
-      // 1. 로컬 스토리지에서 토큰 가져오기
-      const token = localStorage.getItem('access_token');
-
-      if (!token) {
-        setError("로그인이 필요합니다.");
-        setLoading(false);
-        return;
-      }
+    const loadInitialData = async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) return setLoading(false);
 
       try {
-        // 2. fetch의 headers 객체에 'Authorization' 추가
-        const response = await fetch("http://192.168.100.3:8000/users/me", {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            // (GET에는 'Content-Type'이 필수는 아닙니다)
-          }
+        const userRes = await fetch(`${BASE_URL}/users/me`, {
+          headers: { Authorization: `Bearer ${token}` }
         });
+        if (userRes.ok) setUserInfo(await userRes.json());
 
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+        const deviceRes = await fetch(`${BASE_URL}/devices/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (deviceRes.ok) setDeviceData(await deviceRes.json());
 
-        if (response.ok) {
-          const data = await response.json();
-          setUserInfo(data); // state에 사용자 정보 저장
-          
-          // [신규] 불러온 정보로 '내 상태' 폼 초기화
-          setIsHome(data.is_home);
-          setReturnTime(data.return_time || "");
-          setMemo(data.memo || "");
-
-        } else {
-          setError("사용자 정보를 불러오는데 실패했습니다.");
-        }
       } catch (err) {
-        setError("서버 연결에 실패했습니다.");
-      } finally {
-        setLoading(false);
+        console.error("데이터 로딩 실패", err);
       }
+
+      setLoading(false);
     };
 
-    fetchUserInfo(); // 함수 실행
-  }, []); // 빈 배열 [] : 페이지가 처음 로드될 때 1회만 실행
+    loadInitialData();
+  }, []);
 
-  // [신규] 2. '내 상태' 업데이트 버튼 클릭 시 실행될 함수 (PATCH /users/me/status)
-  const handleUpdateStatus = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      alert("로그인이 필요합니다.");
-      return;
-    }
+  // ===============================================================
+  // ⭐ 기기 수정 모달 열기
+  // ===============================================================
+  const openEditModal = (index: number) => {
+    const d = deviceData[index];
+    setEditingIndex(index);
+    setEditNickname(d.name);
+    setEditMemo(d.memo || "");
+    setEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setEditModalOpen(false);
+    setEditingIndex(null);
+  };
+
+  // ===============================================================
+  // ⭐ 기기 수정 저장
+  // ===============================================================
+  const saveEdit = async () => {
+    if (editingIndex === null) return;
+
+    const token = localStorage.getItem("access_token");
+    const target = deviceData[editingIndex];
 
     try {
-      const response = await fetch("http://192.168.100.7:8000/users/me/status", {
-        method: 'PATCH',
+      await fetch(`${BASE_URL}/devices/${target.id}`, {
+        method: "PATCH",
         headers: {
-          'Authorization': `Bearer ${token}`, // ★ 여기도 '출입증'이 필요합니다 ★
-          'Content-Type': 'application/json'  // (PATCH에는 Content-Type 필수)
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ // 보낼 데이터
-          is_home: isHome,
-          return_time: returnTime,
-          memo: memo
+        body: JSON.stringify({
+          name: editNickname,
+          memo: editMemo
         })
       });
 
-      if (response.ok) {
-        const updatedUser = await response.json();
-        setUserInfo(updatedUser); // 최신 정보로 state 업데이트
-        alert("상태가 업데이트되었습니다.");
-      } else {
-        alert("상태 업데이트에 실패했습니다.");
-      }
+      const listRes = await fetch(`${BASE_URL}/devices/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (listRes.ok) setDeviceData(await listRes.json());
+
     } catch (err) {
-      alert("서버 연결에 실패했습니다.");
+      console.error("기기 수정 실패", err);
+    }
+
+    closeEditModal();
+  };
+
+  // ===============================================================
+  // ⭐ NEW: 기기 삭제 기능 추가
+  // ===============================================================
+  const deleteDevice = async (id: number) => {
+    const ok = window.confirm("정말 이 기기를 삭제하시겠습니까?");
+    if (!ok) return;
+
+    const token = localStorage.getItem("access_token");
+
+    try {
+      await fetch(`${BASE_URL}/devices/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // 삭제 후 목록 새로고침
+      const res = await fetch(`${BASE_URL}/devices/me`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) setDeviceData(await res.json());
+
+    } catch (err) {
+      console.error("기기 삭제 실패", err);
     }
   };
 
-
-  // [신규] 3. '기기 추가' 버튼 클릭 시 실행될 함수 (POST /devices/register)
-  const handleRegisterDevice = async () => {
-    const token = localStorage.getItem('access_token');
-    if (!newDeviceName || !newDeviceUid || !token) {
-      setRegisterError("기기 이름과 고유 ID를 모두 입력해주세요.");
-      return;
+  // ===============================================================
+  // ⭐ 신규 기기 등록
+  // ===============================================================
+  const registerDevice = async () => {
+    if (!newDeviceName || !newDeviceUid) {
+      return alert("이름과 UID를 입력하세요!");
     }
-    setRegisterError(null);
+
+    const token = localStorage.getItem("access_token");
 
     try {
-      // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-      // ★ '+ 기기 추가'는 이 함수를 실행합니다! (POST) ★
-      // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-      const BASE_URL = process.env.REACT_APP_API_URL || '';
-      const response = await fetch(`${BASE_URL}/devices/register`, {
-        method: 'POST',
+      const res = await fetch(`${BASE_URL}/devices/register`, {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${token}`, // ★ 여기도 '출입증'이 필요합니다 ★
-          'Content-Type': 'application/json'  // (POST에는 Content-Type 필수)
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           name: newDeviceName,
-          device_uid: newDeviceUid
+          device_uid: newDeviceUid,
+          memo: ""
         })
       });
 
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
-      if (response.ok) {
-        const newDevice = await response.json();
-        alert(`기기 등록 성공! API 키: ${newDevice.api_key}\n(이 키를 기기에 입력해야 합니다)`);
-        // (참고: 이 api_key를 localStorage.setItem("myDeviceApiKey", newDevice.api_key)로
-        // 저장해두면 DeviceViewPage의 파일 업로드 테스트가 동작합니다.)
+      if (res.ok) {
+        alert("기기 등록 완료!");
         setNewDeviceName("");
         setNewDeviceUid("");
-        // (실제라면 여기서 기기 목록을 다시 불러와야 합니다)
-      } else {
-        const errData = await response.json();
-        setRegisterError(errData.detail?.[0]?.msg || "기기 등록에 실패했습니다.");
+        setRegisterModalOpen(false);
+
+        const listRes = await fetch(`${BASE_URL}/devices/me`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (listRes.ok) setDeviceData(await listRes.json());
       }
+
     } catch (err) {
-      setRegisterError("서버 연결에 실패했습니다.");
+      console.error("기기 등록 실패", err);
     }
   };
-  
+
+  // ===============================================================
+
   return (
     <div className="manage-container">
-     {/* 1. 헤더 ( [수정] 임시 userData 대신 실제 userInfo state 사용 ) */}
+
       <header className="manage-header">
         <span className="logo">ALERTO</span>
         <h1 className="user-greeting">
-          {/* 로딩 중이거나, userInfo가 있으면 이름을 표시 */}
-          {loading ? '...' : (userInfo ? `${userInfo.full_name} 님` : '로그인 필요')}
+          {loading ? "..." : userInfo ? `${userInfo.full_name} 님` : "사용자"}
         </h1>
       </header>
-      {/* 2. 구독하기 버튼 */}
-      <div className="manage-section">
-        <Link to="/subscription" className="subscribe-link-button">
-          구독하기
-        </Link>
-      </div>
 
-      {/* 3. 기기 관리 섹션 */}
       <section className="manage-section">
-        <h2 className="section-title">기기관리</h2>
-        {/* 임시 기기 카드 */}
-        <div className="device-card-manage">
-          <div className="card-header">
-            <h3 className="device-nickname">{deviceData.nickname}</h3>
-            <span className="device-owner">{deviceData.owner}</span>
-            <span className="arrow">{">"}</span>
-          </div>
-          <p className="device-id">{deviceData.id}</p>
-          <p className="device-warranty">보증 기간 - {deviceData.warranty}</p>
-          <div className="ai-notes">
-            <h4 className="ai-notes-title">AI가 참고할 내용</h4>
-            <ul>
-              {deviceData.aiNotes.map((note, index) => (
-                <li key={index}>{note}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-            {/* [신규] '+ 기기 추가' 버튼을 '기기 등록 폼'으로 변경 */}
-        <div className="add-device-form">
-          {/* ▼ 1. '기기 이름' 입력창 추가 ▼ */}
-          <input
-            type="text"
-            placeholder="새 기기 이름"
-            className="manage-input" 
-            value={newDeviceName}
-            onChange={(e) => setNewDeviceName(e.target.value)}
-          />
-          {/* ▼ 2. '기기 고유 ID' 입력창 추가 ▼ */}
-          <input
-            type="text"
-            placeholder="새 기기 고유 ID (UID)"
-            className="manage-input" 
-            value={newDeviceUid}
-            onChange={(e) => setNewDeviceUid(e.target.value)}
-          />
+        <h2 className="section-title">기기 목록</h2>
 
-          {/* ▼ 3. 기존 버튼에 onClick 연결 ▼ */}
-          <button className="add-button" onClick={handleRegisterDevice}>
-            + 기기 추가
-          </button>
-          
-          {/* ▼ 4. 에러 메시지 표시 영역 추가 ▼ */}
-          {registerError && <p className="error-message">{registerError}</p>}
-        </div>      </section>
+        {deviceData.map((d, i) => (
+          <div key={i} className="device-card-manage upgraded-device-card">
 
-      {/* 4. 생체 등록 섹션 */}
-      <section className="manage-section">
-        <h2 className="section-title">생체 등록</h2>
-        <div className="bio-card">
-          {/* 임시 생체 등록자 아바타 */}
-          <div className="avatar-placeholder"></div>
-          <div className="avatar-placeholder"></div>
-          <span className="arrow">{">"}</span>
-        </div>
-        {/* PDF 12페이지(생체 등록)로 이동하는 링크 (경로 임시) */}
-        <Link to="/manage/register-bio" className="add-button">
-          + 등록 추가
-        </Link>
+            <div className="device-card-top">
+              <div className="device-title-box">
+                <h3 className="device-nickname">{d.name}</h3>
+                <p className="device-id">UID: {d.device_uid}</p>
+              </div>
+
+              <span 
+                className="arrow edit-button left-arrow"
+                onClick={() => openEditModal(i)}
+              >
+                ›
+              </span>
+            </div>
+
+            <div className="ai-notes">
+              <h4 className="ai-notes-title">기기 메모</h4>
+              <pre style={{ whiteSpace: "pre-wrap" }}>{d.memo}</pre>
+            </div>
+
+            {/* ⭐ NEW: 삭제 버튼 추가 */}
+            <button
+              className="device-delete-small-btn"
+              onClick={() => deleteDevice(d.id)}
+            >
+              삭제
+            </button>
+
+          </div>
+        ))}
+
+        <button className="add-button" onClick={() => setRegisterModalOpen(true)}>
+          + 기기 추가
+        </button>
+
       </section>
-      
-      {/* 5. 공통 하단 네비게이션 */}
+
       <BottomNav />
+
+      {/* 수정 모달 */}
+      {editModalOpen && (
+        <div className="modal-overlay" onClick={closeEditModal}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+
+            <h3 className="modal-title">기기 정보 수정</h3>
+
+            <input
+              className="modal-input"
+              value={editNickname}
+              onChange={(e) => setEditNickname(e.target.value)}
+            />
+
+            <textarea
+              className="modal-textarea"
+              value={editMemo}
+              onChange={(e) => setEditMemo(e.target.value)}
+              rows={4}
+            />
+
+            <div className="modal-buttons">
+              <button className="modal-save" onClick={saveEdit}>저장</button>
+              <button className="modal-cancel" onClick={closeEditModal}>취소</button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 기기 등록 모달 */}
+      {registerModalOpen && (
+        <div className="modal-overlay" onClick={() => setRegisterModalOpen(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+
+            <h3 className="modal-title">새 기기 등록</h3>
+
+            <input
+              className="modal-input"
+              placeholder="기기 이름"
+              value={newDeviceName}
+              onChange={(e) => setNewDeviceName(e.target.value)}
+            />
+
+            <input
+              className="modal-input"
+              placeholder="기기 UID"
+              value={newDeviceUid}
+              onChange={(e) => setNewDeviceUid(e.target.value)}
+            />
+
+            <div className="modal-buttons">
+              <button className="modal-save" onClick={registerDevice}>등록</button>
+              <button className="modal-cancel" onClick={() => setRegisterModalOpen(false)}>취소</button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

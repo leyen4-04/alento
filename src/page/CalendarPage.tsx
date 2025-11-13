@@ -40,7 +40,7 @@ function CalendarPage() {
 
       try {
         // 2. fetch에 'Authorization' 헤더 추가하여 API 호출
-        const response = await fetch("http://192.168.100.7:8000/appointments/", {
+        const response = await fetch("http://192.168.100.3:8000/appointments/", {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`

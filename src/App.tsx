@@ -13,25 +13,35 @@ import CalendarPage from './page/CalendarPage';
 import SubscriptionPage from './page/SubscriptionPage';
 import ManagePage from './page/ManagePage';
 import RegisterBioPage from './page/RegisterBioPage'; // RegisterBioPage 임포트
+import ProfilePage from './page/ProfilePage';
+import UserInfoPage from "./page/UserInfoPage";
+
+
+import { UserProvider } from "./contexts/UserContext";
 
 function App() {
   return (
-    <Router> {/* [수정] Router가 최상위 부모가 됩니다. */}
-      <AuthProvider> {/* [수정] AuthProvider가 Router의 자식이 됩니다. */}
-        <Routes>
-          <Route path="/" element={<MainPage />} />
-          <Route path="/login" element={<LoginPage />} /> 
-          <Route path="/signup" element={<SignUpPage />} /> 
-          <Route path="/find-account" element={<FindAccountPage />} /> 
-          <Route path="/device/:id" element={<DeviceViewPage />} /> 
-          <Route path="/history" element={<HistoryPage />} /> 
-          <Route path="/calendar" element={<CalendarPage />} /> 
-          <Route path="/subscription" element={<SubscriptionPage />} /> 
-          <Route path="/manage" element={<ManagePage />} />
-          <Route path="/manage/register-bio" element={<RegisterBioPage />} /> {/* 생체 등록 라우트 */}
-        </Routes>
-      </AuthProvider>
-    </Router>
+    <UserProvider>
+      <Router> {/* [수정] Router가 최상위 부모가 됩니다. */}
+        <AuthProvider> {/* [수정] AuthProvider가 Router의 자식이 됩니다. */}
+          <Routes>
+             {/* 사용자 조회 페이지 */}
+            <Route path="/user" element={<UserInfoPage />} />
+            <Route path="/" element={<MainPage />} />
+            <Route path="/login" element={<LoginPage />} /> 
+            <Route path="/signup" element={<SignUpPage />} /> 
+            <Route path="/find-account" element={<FindAccountPage />} /> 
+            <Route path="/device/:id" element={<DeviceViewPage />} /> 
+            <Route path="/history" element={<HistoryPage />} /> 
+            <Route path="/calendar" element={<CalendarPage />} /> 
+            <Route path="/subscription" element={<SubscriptionPage />} /> 
+            <Route path="/manage" element={<ManagePage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/manage/register-bio" element={<RegisterBioPage />} /> {/* 생체 등록 라우트 */}
+          </Routes>
+        </AuthProvider>
+        </Router>
+     </UserProvider>
   );
 }
 
