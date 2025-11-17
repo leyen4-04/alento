@@ -76,18 +76,36 @@ function ManagePage() {
     const token = localStorage.getItem("access_token");
     const target = deviceData[editingIndex];
 
+    if (!token) {
+    alert("로그인이 필요합니다.");
+    return;
+    }
+
     try {
-      await fetch(`${BASE_URL}/devices/${target.id}`, {
-        method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
+       // ✅ 1) 이름 수정
+       await fetch(`${BASE_URL}/devices/${target.device_uid}/name`, {
+       method: "PATCH",
+       headers: {
+       Authorization: `Bearer ${token}`,
+       "Content-Type": "application/json",
+       },
+       body: JSON.stringify({
+       name: editNickname,
+        }),
+       });
+
+       // ✅ 2) 메모 수정
+       await fetch(`${BASE_URL}/devices/${target.device_uid}/memo`, {
+       method: "PATCH",
+       headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          name: editNickname,
-          memo: editMemo
-        })
-      });
+       body: JSON.stringify({
+         memo: editMemo,
+        }),
+       });
+
 
       const listRes = await fetch(`${BASE_URL}/devices/me`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -104,28 +122,27 @@ function ManagePage() {
   // ===============================================================
   // ⭐ NEW: 기기 삭제 기능 추가
   // ===============================================================
-  const deleteDevice = async (id: number) => {
+  const deleteDevice = async (deviceUid: string) => {
     const ok = window.confirm("정말 이 기기를 삭제하시겠습니까?");
     if (!ok) return;
 
     const token = localStorage.getItem("access_token");
 
     try {
-      await fetch(`${BASE_URL}/devices/${id}`, {
+      await fetch(`${BASE_URL}/devices/${deviceUid}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }
       });
 
-      // 삭제 후 목록 새로고침
       const res = await fetch(`${BASE_URL}/devices/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.ok) setDeviceData(await res.json());
-
     } catch (err) {
       console.error("기기 삭제 실패", err);
     }
   };
+
 
   // ===============================================================
   // ⭐ 신규 기기 등록
@@ -208,7 +225,7 @@ function ManagePage() {
             {/* ⭐ NEW: 삭제 버튼 추가 */}
             <button
               className="device-delete-small-btn"
-              onClick={() => deleteDevice(d.id)}
+              onClick={() => deleteDevice(d.device_uid)}
             >
               삭제
             </button>
