@@ -104,7 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // 4. 회원가입 함수 (SignUpPage에서 사용)
   const signUp = async (email: string, password: string, fullName: string) => {
-    const response = await fetch(`${BASE_URL}/users/`, {
+    const response = await fetch(`${BASE_URL}/users/signup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
