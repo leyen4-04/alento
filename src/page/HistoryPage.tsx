@@ -1,129 +1,240 @@
-// [신규] React에서 useState와 useEffect를 가져옵니다.
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import BottomNav from '../components/layout/BottomNav'; // 공통 하단 탭
-import '../style/HistoryPage.css'; // 이 페이지 전용 CSS
+// src/page/HistoryPage.tsx
+import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import BottomNav from "../components/layout/BottomNav";
+import "../style/HistoryPage.css";
 
-// [수정] PDF 9페이지의 임시 데이터(배열)를 삭제합니다.
-// const conversationHistory = [ ... ];
+const BASE_URL = process.env.REACT_APP_API_URL;
+
+interface Visit {
+  id: number;
+  summary: string;
+  device_id: number;
+  visitor_photo_url?: string | null;
+  visitor_audio_url?: string | null;
+  ai_response_audio_url?: string | null;
+  created_at: string;
+}
+
+interface Device {
+  id: number;
+  name: string;
+  device_uid: string;
+  memo?: string | null;
+}
 
 function HistoryPage() {
+  const [history, setHistory] = useState<Visit[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // [신규] API 데이터를 저장할 state들을 선언합니다.
-  const [history, setHistory] = useState<any[]>([]); // API 응답(배열)
-  const [loading, setLoading] = useState(true); // 로딩 상태
-  const [error, setError] = useState<string | null>(null); // 에러 상태
+  // 페이지네이션
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 6;
 
-  // [신규] 페이지가 처음 로드될 때 '방문 기록'을 불러옵니다. (GET /visits/)
   useEffect(() => {
-    const fetchHistory = async () => {
-      
-      // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
-      // ★ 'Authorization' 헤더를 사용하는 인증 패턴 ★
-      // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+    const token = localStorage.getItem("access_token");
 
-      // 1. 토큰 가져오기
-      const token = localStorage.getItem('access_token');
-      if (!token) {
-        setError("방문 기록 조회를 위해 로그인이 필요합니다.");
-        setLoading(false);
-        return;
-      }
+    if (!token || !BASE_URL) {
+      setError("로그인이 필요합니다.");
+      setLoading(false);
+      return;
+    }
 
+    const fetchData = async () => {
       try {
-        // 2. fetch에 'Authorization' 헤더 추가하여 API 호출
-        // (참고: /visits/?skip=0&limit=20 처럼 파라미터를 넘겨 페이지네이션 구현 가능)
-        const BASE_URL = process.env.REACT_APP_API_URL || '';
+        setLoading(true);
 
-        
-        const response = await fetch(`${BASE_URL}/visits/`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const [visitRes, deviceRes] = await Promise.all([
+          fetch(`${BASE_URL}/visits/?skip=0&limit=100`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+          fetch(`${BASE_URL}/devices/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ]);
 
-      // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
-
-        if (response.ok) {
-          const data = await response.json();
-          setHistory(data); // 성공 시 state에 방문 기록 저장
-        } else {
-          setError("방문 기록을 불러오는데 실패했습니다.");
+        if (!visitRes.ok || !deviceRes.ok) {
+          throw new Error("API 요청 실패");
         }
-      } catch (err) {
-        setError("서버 연결에 실패했습니다.");
+
+        const visitData = await visitRes.json();
+        const deviceData = await deviceRes.json();
+
+        setHistory(visitData);
+        setDevices(deviceData);
+      } catch (e) {
+        console.error(e);
+        setError("방문 기록을 불러오지 못했습니다.");
       } finally {
-        setLoading(false); // 로딩 종료
+        setLoading(false);
       }
     };
 
-    fetchHistory(); // 함수 실행
-  }, []); // 빈 배열 [] : 페이지가 처음 로드될 때 1회만 실행
+    fetchData();
+  }, []);
 
-  
+  // device_id → Device 매핑
+  const deviceMap: Record<number, Device> = {};
+  devices.forEach((d) => {
+    deviceMap[d.id] = d;
+  });
+
+  // device_id별 가장 최신 방문 기록
+  const latestVisitByDevice: Record<number, Visit> = {};
+  history.forEach((v) => {
+    const prev = latestVisitByDevice[v.device_id];
+    if (!prev || new Date(v.created_at) > new Date(prev.created_at)) {
+      latestVisitByDevice[v.device_id] = v;
+    }
+  });
+
+  // 상태 라벨: 진행중 / 지난 대화
+  const getStatusLabel = (visit: Visit) => {
+    const latest = latestVisitByDevice[visit.device_id];
+    if (!latest || latest.id !== visit.id) return "지난 대화";
+
+    const created = new Date(visit.created_at).getTime();
+    const diffMinutes = (Date.now() - created) / 60000;
+    return diffMinutes < 3 ? "진행중" : "지난 대화";
+  };
+
+  // 최신순 정렬
+  const sortedVisits = [...history].sort(
+    (a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  // 페이지 계산
+  const totalPages = Math.max(1, Math.ceil(sortedVisits.length / pageSize));
+  const startIdx = (currentPage - 1) * pageSize;
+  const currentPageVisits = sortedVisits.slice(startIdx, startIdx + pageSize);
+
+  // 전체 개수가 줄어들었을 때 현재 페이지 보정
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
+  if (loading) {
     return (
       <div className="history-container">
-       {/* 1. 헤더 */}
-       <header className="history-header">
-        <span className="logo">ALERTO</span>
-        <h1 className="history-title">지난 대화 목록</h1>
+        <header className="history-header">
+          <h1 className="history-logo">ALERTO</h1>
+          <h2 className="history-title">지난 대화 목록</h2>
+          <p className="history-tip">* 모든 녹화는 30일 까지 기록됩니다 *</p>
+        </header>
+        <p className="history-empty-text">불러오는 중...</p>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="history-container">
+        <header className="history-header">
+          <h1 className="history-logo">ALERTO</h1>
+          <h2 className="history-title">지난 대화 목록</h2>
+          <p className="history-tip">* 모든 녹화는 30일 까지 기록됩니다 *</p>
+        </header>
+        <p className="history-empty-text">{error}</p>
+        <BottomNav />
+      </div>
+    );
+  }
+
+  return (
+    <div className="history-container">
+      {/* 1. 헤더 */}
+      <header className="history-header">
+        <h1 className="history-logo">ALERTO</h1>
+        <h2 className="history-title">지난 대화 목록</h2>
+        <p className="history-tip">* 모든 녹화는 30일 까지 기록됩니다 *</p>
       </header>
- 
-      {/* 2. 안내 문구 */}
-      <p className="history-notice">
-        * 모든 녹화는 30일 까지 기록됩니다 *
-      </p>
 
-       {/* 3. 대화 목록 리스트 */}
-        <div className="history-list">
+      {/* 2. 리스트 */}
+      <main className="history-main">
+        {sortedVisits.length === 0 ? (
+          <p className="history-empty-text">지난 방문 기록이 없습니다.</p>
+        ) : (
+          <div className="history-list">
+            {currentPageVisits.map((visit) => {
+              const device = deviceMap[visit.device_id];
+              const deviceName = device
+                ? device.name
+                : `기기 ${visit.device_id}`;
+              const statusLabel = getStatusLabel(visit);
 
-        {/* [수정] 로딩 및 에러 상태를 표시합니다. */}
-        {loading && <p>방문 기록을 불러오는 중입니다...</p>}
-        {error && <p className="error-message">{error}</p>}
+              const created = new Date(visit.created_at);
+              const dateText = `${created.getFullYear()}-${String(
+                created.getMonth() + 1
+              ).padStart(2, "0")}-${String(created.getDate()).padStart(
+                2,
+                "0"
+              )} ${String(created.getHours()).padStart(2, "0")}:${String(
+                created.getMinutes()
+              ).padStart(2, "0")}`;
 
-        {/* [수정] 'conversationHistory' 대신 API로 받아온 'history' state를 map으로 순회합니다. */}
-        {!loading && !error && history.map((item) => (
-          <div key={item.id} className="history-card">
-            {/* [수정] API 명세서에 'title'이 없고 'summary'가 있으므로, 
-              'summary'를 제목으로 사용합니다. (API 응답: { id, summary, created_at, ... })
-            */}
-            <h2 className="card-title">{item.summary}</h2>
-            
-            {/* [수정] API에 별도 summary 내용이 없으므로 p 태그는 생략하거나
-              다른 정보(예: 기기 ID)를 표시할 수 있습니다. 여기서는 생략합니다.
-            */}
-             {/* <p className="card-summary">{item.summary}</p> */}
+              return (
+                <Link
+                  key={visit.id}
+                  // 🔥 visitId 같이 넘겨주기
+                  to={`/device/${visit.device_id}?visitId=${visit.id}`}
+                  className="history-item-link"
+                >
+                  <article className="history-item">
+                    <div className="history-item-header">
+                      <span className="history-device-name">{deviceName}</span>
+                      <span
+                        className={
+                          statusLabel === "진행중"
+                            ? "history-status active"
+                            : "history-status"
+                        }
+                      >
+                        {statusLabel}
+                      </span>
+                    </div>
 
-            {/* [수정] 'time' 대신 'created_at' 필드를 사용하고, 날짜 형식을 변환합니다. */}
-           <span className="card-time">
-              방문 시간 - {new Date(item.created_at).toLocaleString('ko-KR')}
-            </span>
+                    <p className="history-summary">
+                      {visit.summary
+                        ? visit.summary
+                        : "대화 요약 정보가 없습니다."}
+                    </p>
 
-            {/* (선택) API에 있는 사진/음성 URL을 활용할 수 있습니다. */}
-            {item.visitor_photo_url && (
-              <img src={item.visitor_photo_url} alt="방문자 사진" style={{width: '100%', height: 'auto', marginTop: '10px'}} />
-            )}
-            </div>
-          ))}
-
-        {/* 데이터가 없는 경우 */}
-        {!loading && !error && history.length === 0 && (
-          <p>지난 방문 기록이 없습니다.</p>
+                    <p className="history-time">방문 시간 · {dateText}</p>
+                  </article>
+                </Link>
+              );
+            })}
+          </div>
         )}
-      </div>
 
-      {/* 4. 페이지네이션 (PDF의 1 2 3) - 임시 */}
-      <div className="pagination">
-      <button className="page-num active">1</button>
-      <button className="page-num">2</button>
-      <button className="page-num">3</button>
-      </div>
+        {/* 3. 페이지네이션 */}
+        {sortedVisits.length > pageSize && (
+          <div className="pagination">
+            {Array.from({ length: totalPages }, (_, idx) => {
+              const page = idx + 1;
+              return (
+                <span
+                  key={page}
+                  className={page === currentPage ? "page-num active" : "page-num"}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </span>
+              );
+            })}
+          </div>
+        )}
+      </main>
 
-      {/* 5. 공통 하단 네비게이션 */}
       <BottomNav />
-      </div>
- );
+    </div>
+  );
 }
 
 export default HistoryPage;

@@ -1,214 +1,298 @@
-import React, { useState, useEffect } from 'react'; // [수정] useEffect 임포트
-import { useParams, Link } from 'react-router-dom';
-import BottomNav from '../components/layout/BottomNav';
-import '../style/DeviceViewPage.css';
+// src/page/DeviceViewPage.tsx
+import React, { useEffect, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import BottomNav from "../components/layout/BottomNav";
+import "../style/DeviceViewPage.css";
 
+// ======================
+// 타입 정의
+// ======================
+type ChatSpeaker = "visitor" | "ai" | "user";
 
-// PDF 10페이지의 대화 내용을 임시 데이터로 만듭니다.
-const chatLog = [
-  { speaker: "visitor", text: "택배왔습니다" },
-  { speaker: "visitor", text: "CJ대한통운입니다" },
-  { speaker: "ai", text: "안녕하세요. 어느 택배사이신가요?" }
-];
+type ChatMessage = {
+  speaker: ChatSpeaker;
+  text: string;
+};
 
-// [신규] .env 변수 2개 가져오기
+type DeviceInfo = {
+  id: number;
+  name: string;
+  device_uid: string;
+  memo?: string | null;
+};
+
+// ======================
+// 환경 변수
+// ======================
 const API_URL = process.env.REACT_APP_API_URL; // http://...
 const WS_URL = process.env.REACT_APP_WS_URL;   // ws://...
 
 function DeviceViewPage() {
-  // URL의 :id 값을 가져옵니다. (예: /device/1 -> id는 '1')
-  const { id } = useParams();
-  
-  // [추가] 파일 업로드 테스트를 위한 State
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [aiResponseUrl, setAiResponseUrl] = useState<string | null>(null);
+  const { id } = useParams(); // /device/:id  → 문자열
 
-  // [신규] WebSocket 영상 스트리밍을 위한 State
+  // 1) 기기 정보
+  const [device, setDevice] = useState<DeviceInfo | null>(null);
+
+  // 2) 실시간 영상
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [lastUrl, setLastUrl] = useState<string | null>(null);
-  const [wsError, setWsError] = useState<string | null>(null); // (선택) 웹소켓 에러 표시용
+  const [lastBlobUrl, setLastBlobUrl] = useState<string | null>(null);
+  const [videoWsError, setVideoWsError] = useState<string | null>(null);
 
-  /**
-   * [신규] 방문 처리(파일 업로드) 테스트 함수
-   */
-  const handleVisitUpload = async () => {
-    // 이전 에러/성공 URL 초기화
-    setUploadError(null);
-    setAiResponseUrl(null);
+  // 3) 실시간 대화
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [userInput, setUserInput] = useState("");
+  const [isConversationActive, setIsConversationActive] = useState(false);
+  const [conversationError, setConversationError] = useState<string | null>(
+    null
+  );
+  const conversationWsRef = useRef<WebSocket | null>(null);
 
-    // ★ 기기 API 키 (제공된 스니펫대로 localStorage에서 가져옴을 가정)
-    // 참고: 실제 앱에서는 이 페이지의 device 'id'를 기반으로
-    // 부모 컴포넌트나 context에서 API 키를 가져와야 할 수 있습니다.
-    const apiKey = localStorage.getItem("myDeviceApiKey");
-
-    if (!audioFile || !apiKey) {
-      setUploadError("음성 파일과 기기 API 키는 필수입니다.");
-      return;
-    }
-
-    setIsUploading(true);
-
-    // FormData 준비
-    const formData = new FormData();
-    formData.append("audio_file", audioFile);
-    if (photoFile) {
-      formData.append("photo_file", photoFile);
-    }
-
-    try {
-      // ★ 제공된 스니펫의 엔드포인트 사용
-      const response = await fetch("http://192.168.100.3:8000/handle-visit", { // 주소오류
-        method: "POST",
-        headers: {
-          "X-API-Key": apiKey // ★ 기기 인증 헤더
-        },
-        body: formData,
-      });
-
-      if (response.ok) {
-        // 성공: 응답이 '음성 파일(Blob)'
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        
-        setAiResponseUrl(audioUrl); // State에 저장
-        
-        console.log("AI 응답 음성 수신 성공! URL:", audioUrl);
-        new Audio(audioUrl).play(); // 즉시 재생
-        
-      } else {
-        // 실패: 응답이 'JSON'
-        const errorData = await response.json();
-        setUploadError(errorData.detail || "방문 처리에 실패했습니다.");
-      }
-
-    } catch (error) {
-      console.error("방문 처리 요청 중 에러:", error);
-      setUploadError("서버와 연결할 수 없습니다.");
-    } finally {
-      setIsUploading(false); // 로딩 종료
-    }
-  };
-
-  // [신규] 파일 입력(input) 변경 핸들러
-  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setAudioFile(e.target.files[0]);
-    } else {
-      setAudioFile(null);
-    }
-  };
-
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setPhotoFile(e.target.files[0]);
-    } else {
-      setPhotoFile(null);
-    }
-  };
-
-  /**
-   * [신규] 실시간 영상 WebSocket 연결 (개발 순서 4)
-   */
+  // =====================================
+  // 1. 기기 정보 로딩 : GET /devices/me
+  //    → name, device_uid 가져오기
+  // =====================================
   useEffect(() => {
-    // 1. WebSocket 서버 주소로 연결을 시작합니다.
-    // (id가 없는 경우 연결 시도 방지)
-    if (!id) return;
-    
-    setWsError(null); // 이전 에러 초기화
-    
-    // (제공된 스니펫의 URL 형식 사용)
-    const ws = new WebSocket(`ws://192.168.100.7:8000/ws/stream/${id}`);
+    if (!API_URL || !id) return;
+
+    const token = localStorage.getItem("access_token");
+    if (!token) return;
+
+    const fetchDevice = async () => {
+      try {
+        const res = await fetch(`${API_URL}/devices/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+          console.error("기기 정보 로딩 실패:", res.status);
+          return;
+        }
+
+        const list: DeviceInfo[] = await res.json();
+        const found = list.find((d) => String(d.id) === String(id));
+
+        if (found) {
+          setDevice(found);
+        }
+      } catch (err) {
+        console.error("기기 정보 로딩 에러:", err);
+      }
+    };
+
+    fetchDevice();
+  }, [id]);
+
+  const titleText = device?.name || `기기 ${id ?? ""}`;
+
+  // =====================================
+  // 2. 실시간 영상 WebSocket
+  //     /ws/stream/{device_id}
+  // =====================================
+  useEffect(() => {
+    if (!id || !WS_URL) return;
+
+    setVideoWsError(null);
+
+    const streamUrl = `${WS_URL}/ws/stream/${id}`;
+    const ws = new WebSocket(streamUrl);
 
     ws.onopen = () => {
       console.log(`WebSocket /ws/stream/${id} 연결 성공`);
     };
 
-    // 2. 서버로부터 메시지(영상 프레임)가 올 때마다 실행
     ws.onmessage = (event) => {
-      // event.data는 이미지 바이트(Blob)입니다.
-      // 3. 이 바이트를 <img> 태그가 읽을 수 있는 임시 URL로 변환
-      const newUrl = URL.createObjectURL(event.data);
-      
-      // 4. <img> 태그의 src를 이 새 URL로 업데이트
-      setVideoSrc(newUrl);
+      // 서버에서 오는 건 바이너리(이미지 프레임)라고 가정
+      if (event.data instanceof Blob) {
+        const blobUrl = URL.createObjectURL(event.data);
+        setVideoSrc(blobUrl);
+      }
     };
 
-    // (선택) 에러 핸들링
     ws.onerror = (event) => {
-      console.error("WebSocket 에러:", event);
-      setWsError("실시간 영상 연결에 실패했습니다.");
+      console.error("영상 WebSocket 에러:", event);
+      setVideoWsError("실시간 영상 연결에 실패했습니다.");
     };
 
     ws.onclose = () => {
       console.log(`WebSocket /ws/stream/${id} 연결 종료`);
     };
 
-    // 5. 컴포넌트가 사라질 때(unmount) 연결을 닫습니다.
     return () => {
       ws.close();
-      // (메모리 누수 방지 - lastUrl은 아래 별도 useEffect에서 처리)
     };
-    
-  }, [id]); // deviceId(id)가 바뀔 때마다 새 연결 시작
+  }, [id]);
 
-  /**
-   * [신규] 메모리 누수 방지를 위해, 이전 임시 URL을 폐기
-   */
+  // 기존 Blob URL 정리 (메모리 누수 방지)
   useEffect(() => {
-    // videoSrc가 (새 URL로) 업데이트된 '후에' 실행됩니다.
-    if (lastUrl) {
-      // 6. 이전에 사용했던 임시 URL(lastUrl)을 폐기
-      URL.revokeObjectURL(lastUrl);
+    if (lastBlobUrl) {
+      URL.revokeObjectURL(lastBlobUrl);
     }
-    // 현재 URL(videoSrc)을 '다음' 폐기를 위해 'lastUrl'로 저장
-    setLastUrl(videoSrc);
+    if (videoSrc) {
+      setLastBlobUrl(videoSrc);
+    }
+  }, [videoSrc]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [videoSrc]); // videoSrc가 변경될 때마다 이 effect 실행
-  
+  // =====================================
+  // 3. 실시간 대화 WebSocket
+  //     /ws/conversation/{device_uid}
+  // =====================================
+
+  // (1) 대화 시작
+  const startConversation = () => {
+    if (!device?.device_uid) {
+      alert("기기 UID를 찾을 수 없습니다. 기기 등록을 먼저 확인해주세요.");
+      return;
+    }
+    if (!WS_URL) {
+      alert("WebSocket 서버 주소(WS_URL)가 설정되어 있지 않습니다.");
+      return;
+    }
+
+    setConversationError(null);
+
+    const convUrl = `${WS_URL}/ws/conversation/${device.device_uid}`;
+    const ws = new WebSocket(convUrl);
+    conversationWsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log("대화 WebSocket 연결 성공");
+      setIsConversationActive(true);
+      // 시스템 메시지 느낌으로 하나 추가
+      setChatMessages((prev) => [
+        ...prev,
+        { speaker: "ai", text: "실시간 대화를 시작합니다." },
+      ]);
+    };
+
+    ws.onmessage = (event) => {
+      // 명세서: bytes → AI 음성(mp3), text → AI 응답 텍스트
+      if (event.data instanceof Blob) {
+        const audioURL = URL.createObjectURL(event.data);
+        const audio = new Audio(audioURL);
+        audio.play().catch((e) =>
+          console.error("AI 응답 음성 재생 실패:", e)
+        );
+        return;
+      }
+
+      const text = event.data.toString();
+      console.log("AI 응답 텍스트:", text);
+
+      // 화면에는 AI 말풍선으로 추가
+      setChatMessages((prev) => [...prev, { speaker: "ai", text }]);
+    };
+
+    ws.onerror = (e) => {
+      console.error("대화 WebSocket 에러:", e);
+      setConversationError("대화 WebSocket 연결에 문제가 발생했습니다.");
+    };
+
+    ws.onclose = () => {
+      console.log("대화 WebSocket 연결 종료");
+      setIsConversationActive(false);
+      conversationWsRef.current = null;
+    };
+  };
+
+  // (2) 대화 종료
+  const endConversation = () => {
+    const ws = conversationWsRef.current;
+    if (!ws) return;
+    try {
+      // 명세서: "end" 를 보내면 서버가 대화 종료 처리
+      ws.send("end");
+    } catch (e) {
+      console.error("대화 종료 전송 에러:", e);
+    }
+    ws.close();
+  };
+
+  // (3) 버튼으로 토글
+  const handleToggleConversation = () => {
+    if (isConversationActive) {
+      endConversation();
+    } else {
+      startConversation();
+    }
+  };
+
+  // (4) 사용자가 텍스트 전송
+  const handleSendText = () => {
+    const text = userInput.trim();
+    if (!text) return;
+
+    const ws = conversationWsRef.current;
+    if (!ws || !isConversationActive) {
+      alert("먼저 실시간 대화를 시작해주세요.");
+      return;
+    }
+
+    // 명세서: 프론트에서 텍스트를 보내면
+    // 서버가 TTS로 변환하여 기기로 전달
+    ws.send(text);
+
+    // 화면에는 "user" 말풍선으로 추가
+    setChatMessages((prev) => [...prev, { speaker: "user", text }]);
+    setUserInput("");
+  };
+
+  // Enter 전송 (Shift+Enter 는 줄바꿈)
+  const handleInputKeyDown = (
+    e: React.KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendText();
+    }
+  };
+
+  // 언마운트 시 대화 소켓 정리
+  useEffect(() => {
+    return () => {
+      if (conversationWsRef.current) {
+        try {
+          conversationWsRef.current.close();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, []);
+
+  // ======================
+  // UI 렌더링
+  // ======================
   return (
-    
     <div className="device-view-container">
+      {/* 헤더 */}
       <header className="device-view-header">
-        {/* 뒤로가기 버튼 (임시로 메인페이지로 이동) */}
-        <Link to="/" className="back-button">{"<"}</Link>
-        <h1 className="device-title">기기 {id}</h1>
+        <Link to="/" className="back-button">
+          {"<"}
+        </Link>
+        <h1 className="device-title">{titleText}</h1>
         <span className="logo">ALERTO</span>
       </header>
 
-    {/* 실시간 영상 영역 */}
+      {/* 실시간 영상 영역 */}
       <div className="video-feed-wrapper">
-        {/* [수정] 플레이스홀더 대신 WebSocket 영상 렌더링 */}
-
-        {/* 1. 에러가 발생한 경우 (wsError) */}
-        {wsError ? (
+        {videoWsError ? (
           <div className="video-feed error-feed">
-            <p>{wsError}</p>
+            <p>{videoWsError}</p>
             <span>(WebSocket 연결을 확인해주세요)</span>
           </div>
-        ) : 
-        
-        /* 2. 정상 연결 중 (videoSrc가 있는 경우) */
-        videoSrc ? (
-          <img 
-            src={videoSrc} 
-            alt={`기기 ${id} 실시간 영상`}
+        ) : videoSrc ? (
+          <img
+            src={videoSrc}
+            alt={`${titleText} 실시간 영상`}
             className="video-feed"
           />
-        ) : 
-        
-        /* 3. 로딩 중 (videoSrc가 아직 없는 경우) */
-        (
+        ) : (
           <div className="video-feed loading-feed">
             <p>실시간 영상 연결 중...</p>
           </div>
         )}
-        
-        {/* 영상 위 REC 오버레이 (영상 있을 때만 표시되도록 수정) */}
-        {videoSrc && !wsError && (
+
+        {videoSrc && !videoWsError && (
           <>
             <div className="video-overlay-rec">
               <span className="rec-indicator">REC</span>
@@ -220,87 +304,84 @@ function DeviceViewPage() {
         )}
       </div>
 
-      {/* 실시간 대화 로그 영역 */}
+      {/* 기기 이름이 보이는 대화 헤더 */}
+      <div className="chat-device-header">
+        <span className="chat-device-name">{titleText}</span> 대화 기록
+      </div>
+
+      {/* 채팅 로그 */}
       <div className="chat-log-area">
-        {chatLog.map((chat, index) => (
-          <div key={index} className={`chat-bubble-wrapper ${chat.speaker}`}>
-            {/* AI 메시지일 경우 라벨 표시 */}
-            {chat.speaker === 'ai' && <span className="chat-label">AI 초인종</span>}
-            {chat.speaker === 'visitor' && <span className="chat-label">방문자</span>}
-            
-            <div className="chat-bubble">
-              {chat.text}
+        {chatMessages.map((chat, idx) => {
+          // 방문자 → 왼쪽, 나/AI → 오른쪽 정렬
+          const sideClass =
+            chat.speaker === "visitor" ? "visitor" : "ai";
+
+          return (
+            <div
+              key={idx}
+              className={`chat-bubble-wrapper ${sideClass}`}
+            >
+              {chat.speaker === "visitor" && (
+                <span className="chat-label">방문자</span>
+              )}
+              {chat.speaker === "ai" && (
+                <span className="chat-label">AI 초인종</span>
+              )}
+              {chat.speaker === "user" && (
+                <span className="chat-label">사용자</span>
+              )}
+              <div className="chat-bubble">{chat.text}</div>
             </div>
-          </div>
-        ))}
+          );
+        })}
+
+        {conversationError && (
+          <p className="chat-error-text">{conversationError}</p>
+        )}
       </div>
 
-
-      {/* 실시간 대화 시작 버튼 */}
+      {/* 하단 입력 / 버튼 영역 */}
       <div className="action-area">
-        <button className="start-conversation-button">
-          실시간 대화를 시작합니다
-        </button>
-      </div>
-      
-      {/* [추가] 방문 처리 테스트 영역 */}
-      <div className="visit-test-area">
-        <h3 className="test-title">개발: 방문 처리(handle-visit) 테스트</h3>
-        
-        {/* 1. 음성 파일 (필수) */}
-        <div className="test-input-group">
-          <label htmlFor="audio-input">1. 음성 파일 (필수)</label>
-          <input 
-            type="file" 
-            id="audio-input"
-            accept="audio/*"
-            onChange={handleAudioChange}
-            disabled={isUploading}
-          />
-        </div>
+        {isConversationActive ? (
+          <>
+            {/* 대화 중일 때만 입력창 + >> 버튼 표시 */}
+            <div className="chat-input-row">
+              <textarea
+                className="chat-input"
+                placeholder="방문자에게 전달할 말을 입력하세요."
+                rows={1}
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                onKeyDown={handleInputKeyDown}
+              />
+              <button
+                className="chat-send-button"
+                onClick={handleSendText}
+              >
+                &gt;&gt;
+              </button>
+            </div>
 
-        {/* 2. 사진 파일 (선택) */}
-        <div className="test-input-group">
-          <label htmlFor="photo-input">2. 사진 파일 (선택)</label>
-          <input 
-            type="file" 
-            id="photo-input"
-            accept="image/*"
-            onChange={handlePhotoChange}
-            disabled={isUploading}
-          />
-        </div>
-
-        {/* 3. 전송 버튼 */}
-        <button 
-          className="test-upload-button"
-          onClick={handleVisitUpload}
-          disabled={isUploading}
-        >
-          {isUploading ? "전송 중..." : "방문 테스트 시작"}
-        </button>
-
-        {/* 4. 결과 표시 */}
-        {uploadError && (
-          <div className="test-result error">
-            <p>실패: {uploadError}</p>
-          </div>
-        )}
-        {aiResponseUrl && (
-          <div className="test-result success">
-            <p>성공! AI 응답 음성:</p>
-            {/* 오디오 컨트롤러 표시 */}
-            <audio src={aiResponseUrl} controls />
-          </div>
+            <button
+              className="start-conversation-button end"
+              onClick={handleToggleConversation}
+            >
+              실시간 대화 종료
+            </button>
+          </>
+        ) : (
+          <button
+            className="start-conversation-button"
+            onClick={handleToggleConversation}
+          >
+            실시간 대화를 시작합니다
+          </button>
         )}
       </div>
-      
 
-      {/* 공통 하단 네비게이션 */}
-      <BottomNav  />
+      <BottomNav />
     </div>
   );
 }
 
 export default DeviceViewPage;
-

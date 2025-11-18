@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../style/SignUpPage.css';
 import { useAuth } from '../contexts/AuthContext'; // [수정] useAuth 임포트
-//import bell from 'Bell.png' ///로그인 페이지에 사진 넣기//
 
 function SignUpPage() {
   const navigate = useNavigate();
@@ -49,7 +48,7 @@ function SignUpPage() {
 
   return (
     <div className="signup-container">
-      <img src={"/Bell.png"} alt='picture1' height='60px' width='88px' />   
+        
       <h1 className="signup-title">회원가입</h1>
       
       
