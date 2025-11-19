@@ -1,8 +1,12 @@
-// src/page/DeviceViewPage.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, Link, useLocation } from 'react-router-dom'; // ✅ useLocation 추가
+import { useParams, Link, useLocation } from 'react-router-dom';
 import BottomNav from '../components/layout/BottomNav';
 import '../style/DeviceViewPage.css';
+
+
+
+// 🔹 visits API에서 transcript 불러오기
+import { getVisitTranscript, VisitTranscriptResponse, TranscriptItem } from '../api/visits';
 
 // 채팅 메시지 타입
 type ChatMessage = {
@@ -17,33 +21,21 @@ const initialChatLog: ChatMessage[] = [
   { speaker: 'ai', text: '안녕하세요. 어느 택배사이신가요?' },
 ];
 
-// transcript API 응답 타입
-interface TranscriptItem {
-  id: number;
-  speaker: string;
-  message: string;
-  created_at: string;
-}
-
-interface TranscriptResponse {
-  visit_id: number;
-  summary: string;
-  created_at: string;
-  transcripts: TranscriptItem[];
-}
-
 // .env
 const API_URL = process.env.REACT_APP_API_URL;
 const WS_URL = process.env.REACT_APP_WS_URL;
 
+// 백엔드 speaker 문자열 → 프론트 speaker 타입 매핑
+function mapSpeaker(raw: string): ChatMessage['speaker'] {
+  if (raw === 'visitor') return 'visitor';
+  if (raw === 'user') return 'user';
+  // 그 외는 모두 ai 로 처리 (예: "ai", "assistant" 등)
+  return 'ai';
+}
+
 function DeviceViewPage() {
   const { id } = useParams(); // /device/:id
-  const location = useLocation(); // ✅ 쿼리 파라미터 읽기용
-
-  // URL ?visitId=123 꺼내기
-  const searchParams = new URLSearchParams(location.search);
-  const visitIdParam = searchParams.get('visitId');
-  const visitId = visitIdParam ? Number(visitIdParam) : null;
+  const location = useLocation();
 
   // 기기 정보
   const [deviceName, setDeviceName] = useState<string | null>(null);
@@ -61,7 +53,7 @@ function DeviceViewPage() {
   const [lastUrl, setLastUrl] = useState<string | null>(null);
   const [wsError, setWsError] = useState<string | null>(null);
 
-  // 🔹 실시간 / 과거 대화 공통 채팅 로그
+  // 🔹 실시간 대화용
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialChatLog);
   const [userInput, setUserInput] = useState('');
   const [isConversationActive, setIsConversationActive] = useState(false);
@@ -100,7 +92,45 @@ function DeviceViewPage() {
   }, [id]);
 
   // ---------------------------
-  // 2. (옵션) 방문 처리 업로드 – 필요시만 사용
+  // 2. 특정 visitId 로 들어온 경우 → transcript 불러서 채팅 로그 덮어쓰기
+  //    예) /device/1?visitId=3
+  // ---------------------------
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const visitIdParam = searchParams.get('visitId');
+    if (!visitIdParam) return;
+
+    const visitIdNum = Number(visitIdParam);
+    if (Number.isNaN(visitIdNum)) return;
+
+    const token = localStorage.getItem('access_token');
+    if (!API_URL || !token) return;
+
+    const fetchTranscript = async () => {
+      try {
+        // visits.ts 에서 만든 API 함수 사용
+        const data: VisitTranscriptResponse = await getVisitTranscript(visitIdNum);
+
+        // transcript → chatMessages 로 변환
+        const mapped: ChatMessage[] = data.transcripts.map((t: TranscriptItem) => ({
+          speaker: mapSpeaker(t.speaker),
+          text: t.message,
+        }));
+
+        // 방문 당시 대화만 보이도록 초기 예시 대신 transcript 로 교체
+        if (mapped.length > 0) {
+          setChatMessages(mapped);
+        }
+      } catch (err) {
+        console.error('대화 내역 요청 중 에러:', err);
+      }
+    };
+
+    fetchTranscript();
+  }, [location.search]);
+
+  // ---------------------------
+  // 3. (옵션) 방문 처리 업로드 – 필요시만 사용
   // ---------------------------
   const handleVisitUpload = async () => {
     setUploadError(null);
@@ -164,16 +194,16 @@ function DeviceViewPage() {
   };
 
   // ---------------------------
-  // 3. 실시간 영상 WebSocket (/ws/stream/{device_id})
+  // 4. 실시간 영상 WebSocket (/ws/stream/{device_id})
   // ---------------------------
   useEffect(() => {
-    if (!id || !API_URL) return;
+    if (!id) return;
 
     setWsError(null);
 
     const streamUrl = WS_URL
       ? `${WS_URL}/ws/stream/${id}`
-      : `ws://${API_URL.replace(/^https?:\/\//, '')}/ws/stream/${id}`;
+      : `ws://${API_URL?.replace(/^https?:\/\//, '')}/ws/stream/${id}`;
 
     const ws = new WebSocket(streamUrl);
 
@@ -182,6 +212,7 @@ function DeviceViewPage() {
     };
 
     ws.onmessage = (event) => {
+      if (!(event.data instanceof Blob)) return;
       const newUrl = URL.createObjectURL(event.data);
       setVideoSrc(newUrl);
     };
@@ -207,61 +238,6 @@ function DeviceViewPage() {
     }
     setLastUrl(videoSrc || null);
   }, [videoSrc]);
-
-  // ---------------------------
-  // 4. 지난 대화 transcript 로드 (/visits/{visit_id}/transcript)
-  // ---------------------------
-  useEffect(() => {
-    if (!API_URL) return;
-    if (!visitId) {
-      // 방문 ID가 없으면 (History에서 안 온 경우) 샘플 로그 유지
-      return;
-    }
-
-    const token = localStorage.getItem('access_token');
-    if (!token) return;
-
-    const fetchTranscript = async () => {
-      try {
-        const res = await fetch(`${API_URL}/visits/${visitId}/transcript`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          console.error('대화 내역 불러오기 실패:', await res.text());
-          return;
-        }
-
-        const data: TranscriptResponse = await res.json();
-
-        const mapped: ChatMessage[] = data.transcripts.map((t) => {
-          let speaker: 'visitor' | 'ai' | 'user' = 'visitor';
-          const s = t.speaker.toLowerCase();
-
-          if (s === 'ai' || s === 'assistant') speaker = 'ai';
-          else if (s === 'user' || s === 'owner' || s === 'host') speaker = 'user';
-
-          return { speaker, text: t.message };
-        });
-
-        if (mapped.length > 0) {
-          setChatMessages(mapped);
-        } else {
-          // transcript가 비어있으면 summary라도 보여주기
-          setChatMessages([
-            {
-              speaker: 'ai',
-              text: data.summary || '대화 내역이 없습니다.',
-            },
-          ]);
-        }
-      } catch (err) {
-        console.error('대화 내역 요청 중 에러:', err);
-      }
-    };
-
-    fetchTranscript();
-  }, [visitId]);
 
   // ---------------------------
   // 5. 실시간 대화 WebSocket (/ws/conversation/{device_uid})
@@ -419,13 +395,15 @@ function DeviceViewPage() {
       {/* 채팅 로그 */}
       <div className="chat-log-area">
         {chatMessages.map((chat, index) => {
-          const sideClass = chat.speaker === 'visitor' ? 'visitor' : 'ai';
+          const sideClass =
+            chat.speaker === 'visitor'
+              ? 'visitor'
+              : chat.speaker === 'user'
+              ? 'visitor'
+              : 'ai';
 
           return (
-            <div
-              key={index}
-              className={`chat-bubble-wrapper ${sideClass}`}
-            >
+            <div key={index} className={`chat-bubble-wrapper ${sideClass}`}>
               {chat.speaker === 'visitor' && (
                 <span className="chat-label">방문자</span>
               )}
@@ -456,10 +434,7 @@ function DeviceViewPage() {
                 onChange={(e) => setUserInput(e.target.value)}
                 onKeyDown={handleInputKeyDown}
               />
-              <button
-                className="chat-send-button"
-                onClick={handleSendText}
-              >
+              <button className="chat-send-button" onClick={handleSendText}>
                 &gt;&gt;
               </button>
             </div>
