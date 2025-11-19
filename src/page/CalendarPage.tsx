@@ -1,44 +1,24 @@
-// src/page/CalendarPage.tsx
 import React, { useState, useEffect, useMemo } from "react";
 import BottomNav from "../components/layout/BottomNav";
 import "../style/CalendarPage.css";
-
-const BASE_URL = process.env.REACT_APP_API_URL || "";
-
-// 일정 타입 (백엔드 명세 기준)
-interface Appointment {
-  id: number;
-  title: string;
-  start_time: string;
-  end_time: string | null;
-  status: string;
-  user_id: number;
-  visit_id: number | null;
-}
-
-// 캘린더 한 칸 정보
-interface CalendarCell {
-  date: Date;
-  isCurrentMonth: boolean;
-}
+import { apiRequest } from "../api/client";
+import { Appointment } from "../types";
 
 // 연/월/일 구조체
 interface YMD {
   year: number;
-  month: number; // 1~12
+  month: number; 
   day: number;
 }
 
-// year, month(1~12)를 받아서 6주(42칸)짜리 캘린더 생성
-function generateCalendar(year: number, month: number): CalendarCell[] {
-  const firstOfMonth = new Date(year, month - 1, 1); // 이번 달 1일
+// 캘린더 생성 로직
+function generateCalendar(year: number, month: number) {
+  const firstOfMonth = new Date(year, month - 1, 1);
   const start = new Date(firstOfMonth);
-  const dayOfWeek = firstOfMonth.getDay(); // 0(일) ~ 6(토)
-
-  // 이번 달 1일이 포함된 주의 일요일로 이동
+  const dayOfWeek = firstOfMonth.getDay();
   start.setDate(firstOfMonth.getDate() - dayOfWeek);
 
-  const cells: CalendarCell[] = [];
+  const cells = [];
   for (let i = 0; i < 42; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
@@ -52,79 +32,110 @@ function generateCalendar(year: number, month: number): CalendarCell[] {
 
 function CalendarPage() {
   const daysOfWeek = ["일", "월", "화", "수", "목", "금", "토"];
-
-  // 1) 현재 보고 있는 연/월 (기본: 오늘 기준)
   const now = new Date();
-  const [currentMonthInfo, setCurrentMonthInfo] = useState<{
-    year: number;
-    month: number; // 1~12
-  }>({
+
+  // 상태 관리
+  const [currentMonthInfo, setCurrentMonthInfo] = useState({
     year: now.getFullYear(),
     month: now.getMonth() + 1,
   });
+  const [selectedDate, setSelectedDate] = useState<YMD | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  
+  // 입력 폼 상태
+  const [newTitle, setNewTitle] = useState("");
+  const [newTime, setNewTime] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  // 상세/수정 모달 상태
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
 
   const currentYear = currentMonthInfo.year;
   const currentMonth = currentMonthInfo.month;
 
-  // 2) 선택된 날짜
-  const [selectedDate, setSelectedDate] = useState<YMD | null>(null);
-
-  // 3) 일정 목록
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // 4) 새 일정 추가용 입력값
-  const [newTitle, setNewTitle] = useState("");
-  const [newTime, setNewTime] = useState(""); // "HH:MM"
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-
-  // 현재 월의 캘린더 셀들
   const calendarCells = useMemo(
     () => generateCalendar(currentYear, currentMonth),
     [currentYear, currentMonth]
   );
 
-  // ───────────────────
-  // 일정 목록 불러오기 (GET /appointments/)
-  // ───────────────────
+  // ===============================================================
+  // 1. 일정 불러오기
+  // ===============================================================
+  const fetchAppointments = async () => {
+    try {
+      const data = await apiRequest<Appointment[]>("/appointments/");
+      setAppointments(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    const fetchAppointments = async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setError("일정 조회를 위해 로그인이 필요합니다.");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch(`${BASE_URL}/appointments/`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data: Appointment[] = await response.json();
-          setAppointments(data);
-        } else {
-          setError("일정 데이터를 불러오는데 실패했습니다.");
-        }
-      } catch (err) {
-        setError("서버 연결에 실패했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchAppointments();
   }, []);
 
-  // ───────────────────
-  // 월 변경 (< / >)
-  // ───────────────────
+  // ===============================================================
+  // 2. 일정 추가
+  // ===============================================================
+  const handleAddAppointment = async () => {
+    if (!newTitle.trim() || !newTime) return alert("제목과 시간을 입력해주세요.");
+
+    const year = selectedDate?.year ?? currentYear;
+    const month = selectedDate?.month ?? currentMonth;
+    const day = selectedDate?.day ?? new Date().getDate();
+    const [hh, mm] = newTime.split(":").map(Number);
+
+    // ISO 8601 문자열 생성
+    const start = new Date(year, month - 1, day, hh, mm);
+    const isoString = start.toISOString();
+
+    try {
+      setSaving(true);
+      await apiRequest("/appointments/", {
+        method: "POST",
+        body: JSON.stringify({
+          title: newTitle,
+          start_time: isoString,
+          end_time: isoString, // API 명세상 필요하면 동일하게 전송
+          status: "SCHEDULED"
+        }),
+      });
+
+      alert("일정이 등록되었습니다.");
+      setNewTitle("");
+      setNewTime("");
+      fetchAppointments(); // 목록 갱신
+    } catch (e: any) {
+      alert(e.message || "일정 등록 실패");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ===============================================================
+  // 3. 일정 삭제
+  // ===============================================================
+  const handleDeleteAppointment = async () => {
+    if (!selectedAppt) return;
+    if (!window.confirm("정말 이 일정을 삭제하시겠습니까?")) return;
+
+    try {
+      await apiRequest(`/appointments/${selectedAppt.id}`, {
+        method: "DELETE"
+      });
+      alert("삭제되었습니다.");
+      setDetailModalOpen(false);
+      setSelectedAppt(null);
+      fetchAppointments();
+    } catch (e: any) {
+      alert(e.message || "삭제 실패");
+    }
+  };
+
+  // ===============================================================
+  // 네비게이션 & 필터링
+  // ===============================================================
   const goPrevMonth = () => {
     setSelectedDate(null);
     setCurrentMonthInfo(({ year, month }) =>
@@ -139,9 +150,6 @@ function CalendarPage() {
     );
   };
 
-  // ───────────────────
-  // 날짜 클릭
-  // ───────────────────
   const handleDateClick = (cellDate: Date) => {
     setSelectedDate({
       year: cellDate.getFullYear(),
@@ -150,262 +158,135 @@ function CalendarPage() {
     });
   };
 
-  // ───────────────────
-  // 현재 월 일정 + 선택된 날짜 일정 필터링
-  // ───────────────────
-  const appointmentsThisMonth = appointments.filter((appt) => {
-    const d = new Date(appt.start_time);
-    return (
-      d.getFullYear() === currentYear && d.getMonth() + 1 === currentMonth
-    );
-  });
-
-  const filteredAppointments =
-    selectedDate === null
-      ? appointmentsThisMonth
-      : appointmentsThisMonth.filter((appt) => {
-          const d = new Date(appt.start_time);
-          return (
-            d.getFullYear() === selectedDate.year &&
-            d.getMonth() + 1 === selectedDate.month &&
-            d.getDate() === selectedDate.day
-          );
-        });
-
-  // ───────────────────
-  // 새 일정 추가 (POST /appointments/)
-  // ───────────────────
-  const handleAddAppointment = async () => {
-    setSaveError(null);
-
-    const token = localStorage.getItem("access_token");
-    if (!token) {
-      alert("로그인 후 이용해주세요.");
-      return;
-    }
-
-    if (!newTitle.trim()) {
-      alert("일정 제목을 입력해주세요.");
-      return;
-    }
-
-    if (!newTime) {
-      alert("시간을 선택해주세요.");
-      return;
-    }
-
-    // 날짜: 선택된 날짜가 있으면 그걸 쓰고, 없으면 현재 보고 있는 월의 오늘 날짜 사용
-    const base = new Date();
-    const year = selectedDate?.year ?? currentYear ?? base.getFullYear();
-    const month = selectedDate?.month ?? currentMonth ?? base.getMonth() + 1;
-    const day =
-      selectedDate?.day ??
-      (base.getMonth() + 1 === month ? base.getDate() : 1);
-
-    const [hh, mm] = newTime.split(":").map(Number);
-    const start = new Date(year, month - 1, day, hh, mm);
-
-    const payload = {
-      title: newTitle,
-      start_time: start.toISOString(),
-      end_time: null,
-      status: "SCHEDULED",
-      visit_id: null,
-    };
-
-    try {
-      setSaving(true);
-
-      const res = await fetch(`${BASE_URL}/appointments/`, {
-        method: "POST", // ⚠ 서버에 POST /appointments/가 있어야 함
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        setSaveError(errData?.detail || "일정 등록에 실패했습니다.");
-        return;
-      }
-
-      const created: Appointment = await res.json();
-
-      // 리스트에 바로 반영
-      setAppointments((prev) => [created, ...prev]);
-
-      setNewTitle("");
-      setNewTime("");
-      alert("일정이 등록되었습니다!");
-    } catch (e) {
-      console.error(e);
-      setSaveError("일정 등록 중 오류가 발생했습니다.");
-    } finally {
-      setSaving(false);
-    }
+  const openDetailModal = (appt: Appointment) => {
+    setSelectedAppt(appt);
+    setDetailModalOpen(true);
   };
 
-  // ───────────────────
-  // 렌더링
-  // ───────────────────
+  // 필터링 로직
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter((appt) => {
+      const d = new Date(appt.start_time);
+      // 1) 현재 보고 있는 달(Month)에 속하는지 확인
+      if (d.getFullYear() !== currentYear || d.getMonth() + 1 !== currentMonth) return false;
+      
+      // 2) 날짜가 선택되었다면, 그 날짜인지 확인
+      if (selectedDate) {
+        return d.getDate() === selectedDate.day;
+      }
+      return true;
+    });
+  }, [appointments, currentYear, currentMonth, selectedDate]);
+
+
   return (
     <div className="calendar-container">
-      {/* 1. 헤더 */}
       <header className="calendar-header">
         <span className="logo">ALERTO</span>
-
         <div className="month-nav">
-          <button className="nav-arrow" onClick={goPrevMonth}>
-            {"<"}
-          </button>
-          <span className="current-month">
-            {currentYear}년 {currentMonth}월
-          </span>
-          <button className="nav-arrow" onClick={goNextMonth}>
-            {">"}
-          </button>
+          <button className="nav-arrow" onClick={goPrevMonth}>{"<"}</button>
+          <span className="current-month">{currentYear}년 {currentMonth}월</span>
+          <button className="nav-arrow" onClick={goNextMonth}>{">"}</button>
         </div>
       </header>
 
-      {/* 2. 캘린더 그리드 */}
       <div className="calendar-grid">
-        {/* 요일 헤더 */}
         <div className="calendar-weekdays">
-          {daysOfWeek.map((day) => (
-            <div key={day} className="weekday-cell">
-              {day}
-            </div>
-          ))}
+          {daysOfWeek.map((day) => <div key={day} className="weekday-cell">{day}</div>)}
         </div>
-
-        {/* 날짜 셀 */}
         <div className="calendar-dates">
           {calendarCells.map((cell, index) => {
-            const y = cell.date.getFullYear();
-            const m = cell.date.getMonth() + 1;
             const d = cell.date.getDate();
-
-            const isSelected =
-              selectedDate &&
-              selectedDate.year === y &&
-              selectedDate.month === m &&
+            const isSelected = selectedDate && 
+              selectedDate.year === cell.date.getFullYear() && 
+              selectedDate.month === cell.date.getMonth() + 1 && 
               selectedDate.day === d;
-
-            const extraClass = cell.isCurrentMonth ? "" : " other-month";
-
+            
             return (
               <div
                 key={index}
-                className={`date-cell${extraClass}`}
+                className={`date-cell ${!cell.isCurrentMonth ? "other-month" : ""}`}
                 onClick={() => handleDateClick(cell.date)}
               >
-                <span
-                  className={isSelected ? "date-number selected" : "date-number"}
-                >
-                  {d}
-                </span>
+                <span className={isSelected ? "date-number selected" : "date-number"}>{d}</span>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* 3. 일정 섹션 */}
       <section className="schedule-section">
         <h2 className="schedule-title">
-          일정
-          {selectedDate && (
-            <span style={{ fontSize: "0.85rem", marginLeft: "8px" }}>
-              ({selectedDate.month}월 {selectedDate.day}일)
-            </span>
-          )}
+          {selectedDate ? `${selectedDate.month}월 ${selectedDate.day}일 일정` : "이달의 일정"}
         </h2>
 
-        {loading && (
-          <p className="schedule-description">일정을 불러오는 중...</p>
-        )}
-        {error && <p className="schedule-description">{error}</p>}
-
-        {!loading && !error && filteredAppointments.length === 0 && (
-          <p className="schedule-description">
-            {selectedDate
-              ? "해당 날짜에 등록된 일정이 없습니다."
-              : "이 달에는 등록된 일정이 없습니다."}
-          </p>
-        )}
-
-        {!loading && !error && filteredAppointments.length > 0 && (
+        {filteredAppointments.length === 0 ? (
+          <p className="schedule-description">등록된 일정이 없습니다.</p>
+        ) : (
           <ul className="appointment-list">
             {filteredAppointments.map((appt) => {
               const d = new Date(appt.start_time);
-              const dateText = `${d.getMonth() + 1}월 ${d.getDate()}일`;
-              const timeText = `${d.getHours()}시 ${String(
-                d.getMinutes()
-              ).padStart(2, "0")}분`;
-
+              const timeStr = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+              
               return (
-                <li key={appt.id} className="appointment-item">
+                <li key={appt.id} className="appointment-item" onClick={() => openDetailModal(appt)}>
                   <div className="appointment-main">
                     <span className="appointment-title">{appt.title}</span>
                     <span className="appointment-datetime">
-                      {dateText} {timeText}
+                      {d.getMonth()+1}/{d.getDate()} {timeStr}
                     </span>
                   </div>
-                  <span className="appointment-status">
-                    {appt.status || "SCHEDULED"}
-                  </span>
+                  <span className="appointment-status">{appt.status}</span>
                 </li>
               );
             })}
           </ul>
         )}
 
-        {/* 4. 새 일정 추가 폼 */}
         <div className="schedule-add-box">
           <h3 className="schedule-subtitle">새 일정 추가</h3>
-
-          <label className="schedule-label">제목</label>
           <input
             className="schedule-input"
-            placeholder="예: 가스 점검 방문"
+            placeholder="일정 제목"
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
           />
-
-          <label className="schedule-label">시간</label>
           <input
             type="time"
             className="schedule-input"
             value={newTime}
             onChange={(e) => setNewTime(e.target.value)}
           />
-
-          {saveError && (
-            <p className="schedule-description" style={{ color: "red" }}>
-              {saveError}
-            </p>
-          )}
-
-          <button
-            className="schedule-add-button"
-            onClick={handleAddAppointment}
-            disabled={saving}
-          >
+          <button className="schedule-add-button" onClick={handleAddAppointment} disabled={saving}>
             {saving ? "등록 중..." : "일정 등록"}
           </button>
-
-          <p className="schedule-description small">
-            📌 먼저 날짜를 클릭하면 그 날짜로 일정이 등록됩니다.
-            <br />
-            날짜를 선택하지 않으면, 현재 보고 있는 달 기준으로 자동 설정돼요.
-          </p>
         </div>
       </section>
 
-      {/* 5. 하단 네비게이션 */}
       <BottomNav />
+
+      {/* 일정 상세/삭제 모달 */}
+      {detailModalOpen && selectedAppt && (
+        <div className="modal-overlay" onClick={() => setDetailModalOpen(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal-title">일정 상세</h3>
+            <p><strong>제목:</strong> {selectedAppt.title}</p>
+            <p><strong>시간:</strong> {new Date(selectedAppt.start_time).toLocaleString()}</p>
+            
+            <div className="modal-buttons" style={{ marginTop: '20px' }}>
+              {/* 수정 기능은 UI 복잡도상 삭제 후 재등록을 유도하거나 별도 구현 */}
+              <button className="modal-cancel" onClick={() => setDetailModalOpen(false)}>닫기</button>
+              <button 
+                className="modal-save" 
+                style={{ backgroundColor: '#ff4d4d' }} 
+                onClick={handleDeleteAppointment}
+              >
+                삭제하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

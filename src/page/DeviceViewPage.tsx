@@ -3,8 +3,6 @@ import { useParams, Link, useLocation } from 'react-router-dom';
 import BottomNav from '../components/layout/BottomNav';
 import '../style/DeviceViewPage.css';
 
-
-
 // 🔹 visits API에서 transcript 불러오기
 import { getVisitTranscript, VisitTranscriptResponse, TranscriptItem } from '../api/visits';
 
@@ -16,9 +14,9 @@ type ChatMessage = {
 
 // 초기 채팅 로그 (예시)
 const initialChatLog: ChatMessage[] = [
-  { speaker: 'visitor', text: '택배왔습니다' },
-  { speaker: 'visitor', text: 'CJ대한통운입니다' },
-  { speaker: 'ai', text: '안녕하세요. 어느 택배사이신가요?' },
+  // { speaker: 'visitor', text: '택배왔습니다' },
+  // { speaker: 'visitor', text: 'CJ대한통운입니다' },
+  // { speaker: 'ai', text: '안녕하세요. 어느 택배사이신가요?' },
 ];
 
 // .env
@@ -39,7 +37,7 @@ function DeviceViewPage() {
 
   // 기기 정보
   const [deviceName, setDeviceName] = useState<string | null>(null);
-  const [deviceUid, setDeviceUid] = useState<string | null>(null); // ws/conversation 에 사용
+  const [deviceUid, setDeviceUid] = useState<string | null>(null); // ws/conversation 및 ws/stream 에 사용
 
   // (예전 테스트용) 파일 업로드 상태
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -194,21 +192,25 @@ function DeviceViewPage() {
   };
 
   // ---------------------------
-  // 4. 실시간 영상 WebSocket (/ws/stream/{device_id})
+  // 4. 실시간 영상 WebSocket (/ws/stream/{device_uid})
   // ---------------------------
   useEffect(() => {
-    if (!id) return;
+    // ⭐ [수정] id(숫자) 대신 deviceUid(문자열)가 준비되면 실행
+    if (!deviceUid) return;
 
     setWsError(null);
 
+    // ⭐ [수정] URL 끝에 id가 아니라 deviceUid를 붙여야 함
     const streamUrl = WS_URL
-      ? `${WS_URL}/ws/stream/${id}`
-      : `ws://${API_URL?.replace(/^https?:\/\//, '')}/ws/stream/${id}`;
+      ? `${WS_URL}/ws/stream/${deviceUid}`
+      : `ws://${API_URL?.replace(/^https?:\/\//, '')}/ws/stream/${deviceUid}`;
+
+    console.log(`[Video] Connecting to WebSocket: ${streamUrl}`);
 
     const ws = new WebSocket(streamUrl);
 
     ws.onopen = () => {
-      console.log(`WebSocket /ws/stream/${id} 연결 성공`);
+      console.log(`[Video] WebSocket 연결 성공`);
     };
 
     ws.onmessage = (event) => {
@@ -218,18 +220,18 @@ function DeviceViewPage() {
     };
 
     ws.onerror = (event) => {
-      console.error('WebSocket 에러:', event);
+      console.error('[Video] WebSocket 에러:', event);
       setWsError('실시간 영상 연결에 실패했습니다.');
     };
 
     ws.onclose = () => {
-      console.log(`WebSocket /ws/stream/${id} 연결 종료`);
+      console.log(`[Video] WebSocket 연결 종료`);
     };
 
     return () => {
       ws.close();
     };
-  }, [id]);
+  }, [deviceUid]); // ⭐ [수정] 의존성 배열을 deviceUid로 변경
 
   // Blob URL 정리
   useEffect(() => {
@@ -380,9 +382,9 @@ function DeviceViewPage() {
             <div className="video-overlay-rec">
               <span className="rec-indicator">REC</span>
             </div>
-            <div className="video-overlay-zoom">
+            {/* <div className="video-overlay-zoom">
               <span>보다 자세히 들여다보기.</span>
-            </div>
+            </div> */}
           </>
         )}
       </div>
