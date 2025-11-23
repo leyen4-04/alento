@@ -29,6 +29,10 @@ export interface Visit {
   visitor_photo_url?: string | null;
   visitor_audio_url?: string | null;
   ai_response_audio_url?: string | null;
+  
+  // ▼▼▼ [추가됨] 비디오 URL 필드 ▼▼▼
+  visitor_video_url?: string | null;
+  
   created_at: string;
   transcripts?: Transcript[];
 }

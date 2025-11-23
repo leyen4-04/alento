@@ -3,7 +3,7 @@
   flex-direction: column;
   min-height: 100vh;
   /* 부드러운 그radient + 살짝 어두운 배경 */
-  background: radial-gradient(circle at top, #f5f9ff 0%, #dde7ff 30%, #c0c6d8 70%, #a0a6b8 100%);
+  /* background: radial-gradient(circle at top, #f5f9ff 0%, #dde7ff 30%, #c0c6d8 70%, #a0a6b8 100%); */
   padding-bottom: 70px; /* 하단 탭 높이 */
 }
 
@@ -14,7 +14,7 @@
   align-items: center;
   padding: 20px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  background: rgba(255, 255, 255, 0.4);
+  /* background: rgba(255, 255, 255, 0.4); */
   backdrop-filter: blur(10px);
 }
 
@@ -35,7 +35,7 @@
 .history-notice {
   text-align: center;
   font-size: 0.9rem;
-  color: #666;
+  color: #545454;
   padding-top: 8px;
 }
 
@@ -44,6 +44,8 @@
   flex: 1;
   display: flex;
   flex-direction: column;
+
+  
 }
 
 /* 3. 대화 목록 리스트 */
@@ -65,12 +67,12 @@
   margin-bottom: 14px;
 
   /* 유리판 느낌 */
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(195, 184, 184, 0.22);
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.6);
   box-shadow:
     0 10px 25px rgba(15, 23, 42, 0.15),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+    inset 0 0 0 1px #d3d6ff4d;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 
@@ -86,7 +88,7 @@
   bottom: 10px;
   width: 4px;
   border-radius: 999px;
-  background: linear-gradient(180deg, #4f46e5, #06b6d4);
+  background: linear-gradient(180deg, #4e49b7, #06b6d4);
 }
 
 /* 카드 상단 : 기기 이름 + 상태 뱃지 */
@@ -115,7 +117,7 @@
 }
 
 .history-status.active {
-  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  background: linear-gradient(135deg, #e0e0e0, #92b9ca);
   border-color: transparent;
   color: #ffffff;
 }
@@ -164,7 +166,7 @@
 }
 
 .page-num.active {
-  background: linear-gradient(135deg, #2563eb, #38bdf8);
+  background: linear-gradient(135deg, #ffffff, #38bdf8);
   color: #ffffff;
   border-color: transparent;
 }

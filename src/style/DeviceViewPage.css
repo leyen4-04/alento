@@ -38,14 +38,13 @@
 
 /* 실시간 영상 영역 */
 .video-feed-wrapper {
-  /* flex-grow: 1;  ← 화면을 다 잡아먹지 않도록 제거 */
   position: relative; /* 자식 요소(오버레이)의 기준점 */
   background-color: #000;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  height: 260px;            /* 적당한 높이만 차지 (원하는 값으로 조정 가능) */
+  height: 260px;            /* 적당한 높이만 차지 */
 }
 
 .video-feed {
@@ -75,18 +74,9 @@
   margin-top: 5px;
 }
 
-.start-conversation-button {
-  width: 100%;
-  padding: 15px;
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: white;
-  background-color: #007bff; /* (임시) 메인 색상 */
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-}
-
+/* =========================
+   테스트 영역 (업로드 등)
+   ========================= */
 .test-title {
   font-size: 1.1rem;
   font-weight: bold;
@@ -116,7 +106,7 @@
   font-size: 1rem;
   font-weight: bold;
   color: white;
-  background-color: #007bff; /* 테마에 맞는 색상으로 변경하세요 */
+  background-color: #007bff; 
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -151,11 +141,10 @@
 }
 
 /* =========================
-   채팅 영역 스타일
+   채팅 영역 스타일 (수정됨)
    ========================= */
 
 .chat-log-area {
-  /* flex: 1;  ← 이것도 제거해서 영상과 높이 싸움 안 하게 */
   padding: 12px 16px;
   background-color: #ffffff;
   overflow-y: auto;       /* 대화가 많아지면 내부에서 스크롤 */
@@ -169,15 +158,22 @@
   margin-bottom: 8px;
 }
 
-/* 방문자: 왼쪽 정렬 */
+/* 1. 방문자 (왼쪽) */
 .chat-bubble-wrapper.visitor {
   align-items: flex-start;
+  margin-right: auto; /* 왼쪽 정렬 명시 */
 }
 
-/* AI: 오른쪽 정렬 */
+/* 2. AI (오른쪽) */
 .chat-bubble-wrapper.ai {
   align-items: flex-end;
   margin-left: auto; 
+}
+
+/* 3. 사용자 (오른쪽) - 추가됨! */
+.chat-bubble-wrapper.user {
+  align-items: flex-end; /* 내부 요소 우측 정렬 */
+  margin-left: auto;     /* 왼쪽 여백을 채워서 오른쪽으로 밈 */
 }
 
 /* 말풍선 위 발신자 라벨 */
@@ -195,45 +191,34 @@
   word-break: break-word;
 }
 
-/* 방문자 말풍선: 왼쪽, 흰색 */
+/* --- 말풍선 색상 디자인 --- */
+
+/* 방문자 말풍선: 흰색, 테두리 */
 .chat-bubble-wrapper.visitor .chat-bubble {
   background-color: #ffffff;
   border-radius: 18px 18px 18px 4px;
-  border: 1px solid #d0d0d0;
+  border: 2px solid #3f3535; /* 테두리 두께 살짝 조정 */
 }
 
-/* AI 말풍선: 오른쪽, 파란색 */
+/* AI 말풍선: 파란색 계열 (기존 oklab 색상 유지 또는 대체) */
 .chat-bubble-wrapper.ai .chat-bubble {
-  background-color: oklab(75.111% -0.01119 -0.09751);
+  background-color: #e1f0ff; /* 밝은 파랑 */
   border-radius: 18px 18px 4px 18px;
   border: none;
+  color: #333;
 }
 
-/* 실시간 대화 시작 버튼 영역 */
-.action-area {
-  padding: 12px 16px 16px;
-  background-color: #ffffff;
-}
-
-.start-conversation-button {
-  width: 100%;
-  padding: 12px 16px;
+/* 사용자 말풍선: 노란색 (수정됨!) */
+.chat-bubble-wrapper.user .chat-bubble {
+  background-color: #ddeafa; /* 카카오톡 같은 노란색 */
+  border-radius: 18px 18px 4px 18px;
   border: none;
-  border-radius: 12px;
-  background-color: #007bff;
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
+  color: #000;
 }
 
-.start-conversation-button:active {
-  opacity: 0.9;
-}
-
-
-
-/* ====== 하단 입력 영역 ====== */
+/* =========================
+   하단 입력/버튼 영역
+   ========================= */
 
 .action-area {
   padding: 12px 16px 16px;

@@ -35,6 +35,14 @@ function DeviceViewPage() {
   const { id } = useParams(); // /device/:id
   const location = useLocation();
 
+  // ▼▼▼ [수정됨] 뒤로가기 경로 결정 로직 ▼▼▼
+  // URL에 visitId 파라미터가 있으면 '지난 기록' 리스트에서 온 것이므로 /history로 이동
+  // 없으면 '메인'에서 온 것이므로 / 로 이동
+  const searchParams = new URLSearchParams(location.search);
+  const visitIdParam = searchParams.get('visitId');
+  const backUrl = visitIdParam ? "/history" : "/";
+  // ▲▲▲ [수정됨] 끝 ▲▲▲
+
   // 기기 정보
   const [deviceName, setDeviceName] = useState<string | null>(null);
   const [deviceUid, setDeviceUid] = useState<string | null>(null); // ws/conversation 및 ws/stream 에 사용
@@ -94,8 +102,7 @@ function DeviceViewPage() {
   //    예) /device/1?visitId=3
   // ---------------------------
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search);
-    const visitIdParam = searchParams.get('visitId');
+    // 위에서 정의한 visitIdParam 사용
     if (!visitIdParam) return;
 
     const visitIdNum = Number(visitIdParam);
@@ -125,7 +132,7 @@ function DeviceViewPage() {
     };
 
     fetchTranscript();
-  }, [location.search]);
+  }, [visitIdParam]); // location.search 대신 visitIdParam 사용
 
   // ---------------------------
   // 3. (옵션) 방문 처리 업로드 – 필요시만 사용
@@ -351,7 +358,8 @@ function DeviceViewPage() {
     <div className="device-view-container">
       {/* 헤더 */}
       <header className="device-view-header">
-        <Link to="/" className="back-button">
+        {/* ▼▼▼ [수정됨] 동적 URL 적용 ▼▼▼ */}
+        <Link to={backUrl} className="back-button">
           {'<'}
         </Link>
         <h1 className="device-title">{titleText}</h1>
@@ -377,16 +385,7 @@ function DeviceViewPage() {
           </div>
         )}
 
-        {videoSrc && !wsError && (
-          <>
-            <div className="video-overlay-rec">
-              <span className="rec-indicator">REC</span>
-            </div>
-            {/* <div className="video-overlay-zoom">
-              <span>보다 자세히 들여다보기.</span>
-            </div> */}
-          </>
-        )}
+       
       </div>
 
       {/* 기기 이름이 보이는 대화 헤더 */}
@@ -401,7 +400,7 @@ function DeviceViewPage() {
             chat.speaker === 'visitor'
               ? 'visitor'
               : chat.speaker === 'user'
-              ? 'visitor'
+              ? 'user'
               : 'ai';
 
           return (

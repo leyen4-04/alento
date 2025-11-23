@@ -45,7 +45,7 @@ function HistoryPage() {
 
     try {
       await apiRequest(`/visits/${visitId}`, { method: "DELETE" });
-      // 목록 갱신 (로컬 상태 업데이트)
+      // 목록 갱신
       setHistory((prev) => prev.filter((v) => v.id !== visitId));
     } catch (err: any) {
       alert(err.message || "삭제 실패");
@@ -96,24 +96,57 @@ function HistoryPage() {
                   <article className="history-item">
                     <div className="history-item-header">
                       <span className="history-device-name">{deviceName}</span>
-                      {/* 삭제 버튼 추가 */}
                       <button 
                         onClick={(e) => deleteVisit(e, visit.id)}
+                        aria-label="삭제"
                         style={{
                           border: 'none',
                           background: 'transparent',
                           color: '#ff5c5c',
                           cursor: 'pointer',
-                          fontSize: '0.8rem',
-                          fontWeight: 'bold'
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          padding: '4px',
                         }}
                       >
-                        삭제
+                        <svg 
+                          width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18"></line>
+                          <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
                       </button>
                     </div>
+                    
                     <p className="history-summary">
                       {visit.summary || "대화 요약 정보가 없습니다."}
                     </p>
+
+                    {/* ▼▼▼ 비디오 썸네일 (클릭 시 페이지 이동됨) ▼▼▼ */}
+                    {visit.visitor_video_url && (
+                      <div 
+                        className="history-video-wrapper"
+                        style={{ marginTop: '12px', marginBottom: '8px' }}
+                      >
+                        <video 
+                          width="100%" 
+                          preload="metadata"
+                          // controls 제거: 재생 바를 숨겨서 썸네일처럼 보이게 함
+                          style={{ 
+                            borderRadius: '8px', 
+                            backgroundColor: '#000', 
+                            display: 'block',
+                            pointerEvents: 'none' // 중요: 클릭 이벤트를 무시하고 부모(Link)가 받도록 함
+                          }}
+                        >
+                          <source src={visit.visitor_video_url} type="video/mp4" />
+                          브라우저가 비디오 태그를 지원하지 않습니다.
+                        </video>
+                      </div>
+                    )}
+                    {/* ▲▲▲ 수정 완료 ▲▲▲ */}
+
                     <p className="history-time">방문 시간 · {dateText}</p>
                   </article>
                 </Link>
