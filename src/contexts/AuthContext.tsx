@@ -8,6 +8,9 @@ import React, {
 } from "react";
 import { UserContext } from "./UserContext"; // 같은 폴더라 경로 OK
 
+// ✅ FCM 초기화 import 추가
+import { initFCM } from "../fcm";
+
 // ✅ CRA/Vite 둘 다 대응 + ngrok 주소 보장
 const BASE_URL =
   (import.meta as any).env?.VITE_API_URL ||
@@ -46,12 +49,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (storedToken) setToken(storedToken);
   }, []);
 
-  // 2) 토큰 생기면 유저 정보 로드
+  // 2) 토큰 생기면 유저 정보 로드 + ✅ FCM 초기화
   useEffect(() => {
     if (!token) {
       setUser(null);
       return;
     }
+
+    // ✅ 로그인/자동로그인으로 token 생긴 순간 FCM 붙이기
+    initFCM();
 
     const getMyInfo = async () => {
       try {
@@ -120,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     localStorage.setItem("access_token", data.access_token);
-    setToken(data.access_token); // ✅ 여기서 user 로딩 useEffect 돌아감
+    setToken(data.access_token); // ✅ 여기서 user 로딩 useEffect + initFCM 둘 다 돌아감
   };
 
   // 4) 회원가입

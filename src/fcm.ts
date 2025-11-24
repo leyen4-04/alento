@@ -4,8 +4,7 @@ import { messaging } from "./firebase";
 import { apiRequest } from "./api/client";
 
 // ✅ .env에서 VAPID 키 가져오기 (없으면 null 처리)
-const VAPID_KEY =
-  process.env.REACT_APP_FIREBASE_VAPID_KEY?.trim() || "";
+const VAPID_KEY = process.env.REACT_APP_FIREBASE_VAPID_KEY?.trim() || "";
 
 /**
  * VAPID 키가 비어있거나 placeholder면 getToken 호출 자체를 막음
@@ -37,8 +36,24 @@ export async function requestFCMToken(): Promise<string | null> {
       return null;
     }
 
-    // 2) FCM 토큰 발급
-    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
+    // ✅ 1.5) (핵심) 내가 만든 서비스워커를 직접 등록
+    let swReg: ServiceWorkerRegistration | undefined = undefined;
+    if ("serviceWorker" in navigator) {
+      try {
+        swReg = await navigator.serviceWorker.register(
+          "/firebase-messaging-sw.js"
+        );
+        console.log("✅ FCM SW 등록 성공:", swReg);
+      } catch (e) {
+        console.warn("⚠️ FCM SW 등록 실패(기본 SW로 진행):", e);
+      }
+    }
+
+    // 2) FCM 토큰 발급 (등록한 SW를 명시적으로 넣어줌)
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration: swReg,
+    });
 
     if (!token) {
       console.log("🛑 FCM 토큰 발급 실패");

@@ -1,30 +1,29 @@
 /* public/firebase-messaging-sw.js */
 
-// ✅ 서비스워커는 compat가 제일 안정적
-importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js");
 
-// 🔥🔥🔥 여기 꼭! src/firebase.ts에 있는 "진짜 config" 그대로 복붙
+// ✅ firebase.ts와 1글자도 다르면 안 됨
 firebase.initializeApp({
-  apiKey: "여기_너_진짜_apiKey",
-  authDomain: "여기_너_진짜_authDomain",
-  projectId: "여기_너_진짜_projectId",
-  storageBucket: "여기_너_진짜_storageBucket",
-  messagingSenderId: "여기_너_진짜_messagingSenderId",
-  appId: "여기_너_진짜_appId",
+  apiKey: "AIzaSyCrs0hdpZgDozOKMZZYgZiYlzJCefbMMjk",
+  authDomain: "alentofcm.firebaseapp.com",
+  projectId: "alentofcm",
+  storageBucket: "alentofcm.firebasestorage.app",
+  messagingSenderId: "37483732714",
+  appId: "1:37483732714:web:a8d00160ceb385122c0193",
 });
 
 const messaging = firebase.messaging();
 
-// 백그라운드 메시지 핸들링
+// 백그라운드 알림 수신
 messaging.onBackgroundMessage((payload) => {
-  console.log("[firebase-messaging-sw.js] Received background message ", payload);
+  console.log("[firebase-messaging-sw.js] background:", payload);
 
-  const notificationTitle = payload?.notification?.title || "ALERTO 알림";
-  const notificationOptions = {
+  const title = payload?.notification?.title || "ALERTO 알림";
+  const options = {
     body: payload?.notification?.body || "",
     icon: "/logo192.png",
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  self.registration.showNotification(title, options);
 });

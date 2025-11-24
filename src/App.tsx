@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { UserProvider } from "./contexts/UserContext";
@@ -21,15 +21,34 @@ import UserInfoPage from "./page/UserInfoPage";
 import { initFCM } from "./fcm";
 
 function App() {
+  // ✅ 개발환경 StrictMode에서 useEffect 2번 도는거 방지
+  const fcmInitRef = useRef(false);
+
+  const tryInitFCM = () => {
+    if (fcmInitRef.current) return; // 이미 초기화했으면 스킵
+
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      fcmInitRef.current = true;
+      initFCM();
+    }
+  };
 
   // 🔥 앱 시작할 때 FCM 초기화
   useEffect(() => {
-    const token = localStorage.getItem("access_token");
+    tryInitFCM();
 
-    // 로그인된 상태에서만 initFCM 실행
-    if (token) {
-      initFCM();
-    }
+    // ✅ 로그인 이후에 토큰이 생기는 경우도 잡기 위해 이벤트 추가
+    const onStorage = () => tryInitFCM();
+    const onFocus = () => tryInitFCM();
+
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   return (

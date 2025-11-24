@@ -133,109 +133,112 @@ export default function DeviceViewPage() {
     loadHistoryData();
   }, [isHistoryMode, visitIdParam, API_URL]);
 
-  /* =========================================================
-        #2 실시간 모드: 기기 정보 로드 (/devices/me)
-  ========================================================= */
-  useEffect(() => {
-    if (isHistoryMode) return;
-    if (!API_URL || !id) return;
+ /* =========================================================
+      #2 실시간 모드: 기기 정보 로드 (/devices/me)
+========================================================= */
+useEffect(() => {
+  if (isHistoryMode) return;
+  if (!API_URL || !id) return;
 
-    const token = localStorage.getItem("access_token");
-    if (!token) return;
+  const token = localStorage.getItem("access_token");
+  if (!token) return;
 
-    const fetchDevice = async () => {
-      try {
-        const res = await fetch(`${API_URL}/devices/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+  const fetchDevice = async () => {
+    try {
+      const res = await fetch(`${API_URL}/devices/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "ngrok-skip-browser-warning": "true", // ✅ ngrok 우회
+        },
+      });
 
-        if (!res.ok) return;
+      if (!res.ok) return;
 
-        const list = await res.json();
-        const found = list.find((d: any) => String(d.id) === String(id));
-
-        if (found) {
-          setDeviceName(found.name || null);
-          setDeviceUid(found.device_uid || null);
-        }
-      } catch (err) {
-        console.error("[실시간 모드] 기기 정보 실패:", err);
+      const text = await res.text();
+      if (text.startsWith("<!DOCTYPE") || text.startsWith("<html")) {
+        throw new Error("ngrok HTML 응답이 와서 JSON 파싱 불가");
       }
-    };
 
-    fetchDevice();
-  }, [isHistoryMode, id, API_URL]);
+      const list = JSON.parse(text);
+      const found = list.find((d: any) => String(d.id) === String(id));
 
-  /* =========================================================
-        #3 실시간 영상 WebSocket (/ws/stream/{device_uid})
-        (✅ 원래 기록 로드로 중복돼 있던 부분을 진짜 WS로 복구)
-  ========================================================= */
-  useEffect(() => {
-    if (isHistoryMode) return;
-    if (!deviceUid) return;
-
-    const streamUrl = WS_URL
-      ? `${WS_URL}/ws/stream/${deviceUid}`
-      : `ws://${API_URL?.replace(
-          /^https?:\/\//,
-          ""
-        )}/ws/stream/${deviceUid}`;
-
-    const ws = new WebSocket(streamUrl);
-    ws.binaryType = "blob";
-    videoWsRef.current = ws;
-
-    ws.onopen = () => {
-      setWsError(null);
-      console.log("[실시간 영상] WS 연결됨:", streamUrl);
-    };
-
-    ws.onmessage = (event) => {
-      try {
-        // 1) blob(이미지 프레임)로 오는 경우
-        if (event.data instanceof Blob) {
-          const url = URL.createObjectURL(event.data);
-
-          if (lastUrlRef.current) URL.revokeObjectURL(lastUrlRef.current);
-          lastUrlRef.current = url;
-
-          setVideoSrc(url);
-          return;
-        }
-
-        // 2) 문자열(base64)로 오는 경우도 대응
-        if (typeof event.data === "string") {
-          const msg = event.data;
-
-          if (msg.startsWith("data:image")) {
-            setVideoSrc(msg);
-          } else {
-            // raw base64라면 data url로 래핑
-            setVideoSrc(`data:image/jpeg;base64,${msg}`);
-          }
-        }
-      } catch (err) {
-        console.error("[실시간 영상] 프레임 처리 실패:", err);
+      if (found) {
+        setDeviceName(found.name || null);
+        setDeviceUid(found.device_uid || null);
       }
-    };
+    } catch (err) {
+      console.error("[실시간 모드] 기기 정보 실패:", err);
+    }
+  };
 
-    ws.onerror = () => {
-      setWsError("실시간 영상 연결 오류");
-    };
+  fetchDevice();
+}, [isHistoryMode, id, API_URL]);
 
-    ws.onclose = () => {
-      console.log("[실시간 영상] WS 종료");
-      videoWsRef.current = null;
-    };
 
-    return () => {
-      ws.close();
-      if (lastUrlRef.current) {
-        URL.revokeObjectURL(lastUrlRef.current);
-        lastUrlRef.current = null;
+ /* =========================================================
+      #3 실시간 영상 WebSocket (/ws/stream/{device_uid})
+      ✅ 실시간 모드에서만 실행됨 → 기록(저장) 영상에 영향 없음
+========================================================= */
+useEffect(() => {
+  if (isHistoryMode) return;   // ✅ 기록 모드면 실행 안 함
+  if (!deviceUid) return;     // ✅ UID 없으면 못 염
+
+  // WS_URL이 env에서 /ws로 끝나면 중복 방지
+  const wsBase = WS_URL ? WS_URL.replace(/\/ws$/, "") : null;
+
+  const streamUrl = wsBase
+    ? `${wsBase}/ws/stream/${deviceUid}`
+    : `ws://${API_URL?.replace(/^https?:\/\//, "")}/ws/stream/${deviceUid}`;
+
+  console.log("[실시간 영상] streamUrl =", streamUrl);
+
+  const ws = new WebSocket(streamUrl);
+  videoWsRef.current = ws;
+
+  ws.onopen = () => {
+    setWsError(null);
+    console.log("[실시간 영상] WS 연결됨");
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      if (typeof event.data === "string") {
+        const str = event.data;
+        if (str.startsWith("data:image")) {
+          setVideoSrc(str);
+        } else {
+          setVideoSrc(`data:image/jpeg;base64,${str}`);
+        }
+      } else {
+        const blobUrl = URL.createObjectURL(event.data);
+        if (lastUrlRef.current) URL.revokeObjectURL(lastUrlRef.current);
+        lastUrlRef.current = blobUrl;
+        setVideoSrc(blobUrl);
       }
-    };
-  }, [isHistoryMode, deviceUid, WS_URL, API_URL]);
+    } catch (e) {
+      console.error("[실시간 영상] 프레임 처리 실패:", e);
+    }
+  };
+
+  ws.onerror = (e) => {
+    console.error("[실시간 영상] WS 에러:", e);
+    setWsError("실시간 영상 연결 실패");
+  };
+
+  ws.onclose = () => {
+    console.log("[실시간 영상] WS 종료");
+    videoWsRef.current = null;
+  };
+
+  return () => {
+    ws.close();
+    if (lastUrlRef.current) {
+      URL.revokeObjectURL(lastUrlRef.current);
+      lastUrlRef.current = null;
+    }
+  };
+}, [isHistoryMode, deviceUid, API_URL, WS_URL]);
+
 
   /* =========================================================
         #4 실시간 대화 WebSocket
