@@ -1,67 +1,63 @@
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import React from "react";
 import BottomNav from "../components/layout/BottomNav";
-
+import "../style/ManagePage.css"; // UserInfoPage가 manage 스타일을 쓰고 있어서 유지
+import { useAuth } from "../contexts/AuthContext";
 
 function UserInfoPage() {
-  const [userInfo, setUserInfo] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, logout, token } = useAuth();
 
-  const BASE_URL = process.env.REACT_APP_API_URL;
+  // ✅ AuthContext 기준으로 로그인 판정
+  if (!token) {
+    return <div className="manage-container">로그인이 필요합니다.</div>;
+  }
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const res = await fetch(`${BASE_URL}/users/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setUserInfo(data);
-        }
-      } catch (err) {
-        console.error("유저 정보 로딩 실패:", err);
-      }
-
-      setLoading(false);
-    };
-
-    loadUser();
-  }, []);
-
-  if (loading) return <div className="manage-container">로딩 중...</div>;
-  if (!userInfo) return <div className="manage-container">로그인이 필요합니다.</div>;
+  // 토큰은 있는데 user가 아직 로딩중일 수도 있으니 로딩 표시
+  if (!user) {
+    return <div className="manage-container">로딩 중...</div>;
+  }
 
   return (
     <div className="manage-container">
       <header className="manage-header">
         <span className="logo">ALERTO</span>
-        <h1 className="user-greeting">{userInfo.full_name} 님</h1>
+
+        <h1 className="user-greeting">
+          {user.full_name} 님
+        </h1>
       </header>
 
       <section className="manage-section">
         <h2 className="section-title">내 정보</h2>
 
-        <div className="info-box">
-          <p><strong>이메일:</strong> {userInfo.email}</p>
-          <p><strong>이름:</strong> {userInfo.full_name}</p>
-          <p><strong>메모:</strong></p>
-          <pre style={{ whiteSpace: "pre-wrap" }}>
-            {userInfo.memo || "메모 없음"}
-          </pre>
-        </div>
+        <p><strong>이메일:</strong> {user.email}</p>
+        <p><strong>이름:</strong> {user.full_name}</p>
 
-        {/* 수정 페이지로 이동 */}
-        <Link to="/profile" className="modal-save" style={{ textAlign: "center" }}>
+        <p><strong>메모:</strong></p>
+        <p>{user.memo || "메모 없음"}</p>
+
+        <button
+          className="modal-save"
+          style={{
+            marginTop: "20px",
+            backgroundColor: "#007bff",
+          }}
+          onClick={() => {
+            window.location.href = "/profile";
+          }}
+        >
           정보 수정하기
-        </Link>
+        </button>
+
+        <button
+          className="modal-save"
+          style={{
+            marginTop: "15px",
+            backgroundColor: "#ff4d4d",
+          }}
+          onClick={logout}
+        >
+          로그아웃
+        </button>
       </section>
 
       <BottomNav />

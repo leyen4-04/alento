@@ -1,82 +1,71 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';   // ⭐ useNavigate 추가
-import BottomNav from '../components/layout/BottomNav';
-import '../style/MainPage.css';
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+// ✅ page 폴더 기준 한 단계 위로
+import BottomNav from "../components/layout/BottomNav";
+import "../style/MainPage.css";
+import { apiRequest } from "../api/client";
+
 
 function MainPage() {
-
-  // 사용자 정보 상태
   const [userInfo, setUserInfo] = useState<any>(null);
 
-  // 기기 목록 상태
   const [devices, setDevices] = useState<any[]>([]);
   const [deviceLoading, setDeviceLoading] = useState(true);
   const [deviceError, setDeviceError] = useState<string | null>(null);
 
-  const BASE_URL = process.env.REACT_APP_API_URL;
-
-  // ⭐ 라우터 이동 훅
   const navigate = useNavigate();
 
-  // 로그인한 사용자 정보 불러오기 + 로그인 안 되어 있으면 로그인 화면으로 이동
+  // ✅ 유저 정보 로드
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-
-    // 🔸 토큰이 없으면 곧바로 로그인 페이지로 이동
     if (!token) {
       navigate("/login");
       return;
     }
 
-    if (!BASE_URL) return;
+    const loadUser = async () => {
+      try {
+        const data = await apiRequest<any>("/users/me");
+        setUserInfo(data);
+      } catch (err) {
+        console.error("유저 정보 로딩 실패:", err);
+        setUserInfo(null);
+      }
+    };
 
-    fetch(`${BASE_URL}/users/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => (res.ok ? res.json() : null))
-      .then(data => setUserInfo(data))
-      .catch(err => console.error("유저 정보 로딩 실패:", err));
-  }, [BASE_URL, navigate]);
+    loadUser();
+  }, [navigate]);
 
-  // 내 기기 목록 불러오기 (GET /devices/me)
+  // ✅ 기기 목록 로드
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    if (!BASE_URL) {
-      setDeviceLoading(false);
-      return;
-    }
     if (!token) {
       setDeviceLoading(false);
       return;
     }
 
-    setDeviceLoading(true);
-    setDeviceError(null);
-
-    fetch(`${BASE_URL}/devices/me`, {
-      headers: { Authorization: `Bearer ${token}` }
-    })
-      .then(res => {
-        if (!res.ok) {
-          throw new Error("기기 목록 응답 실패");
-        }
-        return res.json();
-      })
-      .then(data => {
-        setDevices(data || []);
-      })
-      .catch(err => {
+    const loadDevices = async () => {
+      try {
+        setDeviceLoading(true);
+        setDeviceError(null);
+        const list = await apiRequest<any[]>("/devices/me");
+        setDevices(list || []);
+      } catch (err) {
         console.error("기기 목록 로딩 실패:", err);
         setDeviceError("기기 목록을 불러오지 못했습니다.");
-      })
-      .finally(() => setDeviceLoading(false));
-  }, [BASE_URL]);
+      } finally {
+        setDeviceLoading(false);
+      }
+    };
+
+    loadDevices();
+  }, []);
 
   const isLoggedIn = !!userInfo;
 
   return (
     <div className="main-container">
-      
       {/* 1. 헤더 */}
       <header className="main-header">
         <h1 className="main-logo">ALERTO</h1>
@@ -85,14 +74,19 @@ function MainPage() {
           {isLoggedIn ? (
             <span className="login-link">{userInfo.full_name} 님</span>
           ) : (
-            <Link to="/login" className="login-link">로그인/회원가입</Link>
+            <Link to="/login" className="login-link">
+              로그인/회원가입
+            </Link>
           )}
         </div>
       </header>
 
       {/* 2. 구독 배너 */}
       <div className="subscription-banner">
-        <p>"Alento+ 구독하고, 고도화된 AI 이상 징후 분석과 24시간 실시간 맞춤 보안을 경험하세요."</p>
+        <p>
+          "Alento+ 구독하고, 고도화된 AI 이상 징후 분석과 24시간 실시간 맞춤
+          보안을 경험하세요."
+        </p>
       </div>
 
       {/* 3. 기기 목록 섹션 */}
@@ -104,7 +98,7 @@ function MainPage() {
             )}
 
             {deviceError && (
-              <p className="device-description" style={{ color: 'red' }}>
+              <p className="device-description" style={{ color: "red" }}>
                 {deviceError}
               </p>
             )}
@@ -122,7 +116,7 @@ function MainPage() {
                 {devices.map((device) => (
                   <Link
                     key={device.id}
-                    to={`/device/${device.id}`}  // DeviceViewPage 라우트와 맞춰 사용
+                    to={`/device/${device.id}`}
                     className="device-card"
                   >
                     <img
@@ -144,7 +138,6 @@ function MainPage() {
         )}
       </section>
 
-      {/* 4. 하단 네비게이션 */}
       <BottomNav />
     </div>
   );

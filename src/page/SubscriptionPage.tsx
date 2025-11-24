@@ -1,6 +1,7 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import '../style/SubscriptionPage.css'; // 이 페이지 전용 CSS (아래 2번 참고)
+import React from "react";
+import { Link } from "react-router-dom";
+
+import "../style/SubscriptionPage.css";
 
 function SubscriptionPage() {
   // 개인용 플랜 특징

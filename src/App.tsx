@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext'; // AuthProvider 임포트
+import { AuthProvider } from './contexts/AuthContext';
+import { UserProvider } from "./contexts/UserContext";
 
 // 페이지 임포트
 import MainPage from './page/MainPage';
@@ -12,36 +13,46 @@ import HistoryPage from './page/HistoryPage';
 import CalendarPage from './page/CalendarPage';
 import SubscriptionPage from './page/SubscriptionPage';
 import ManagePage from './page/ManagePage';
-import RegisterBioPage from './page/RegisterBioPage'; // RegisterBioPage 임포트
+import RegisterBioPage from './page/RegisterBioPage';
 import ProfilePage from './page/ProfilePage';
 import UserInfoPage from "./page/UserInfoPage";
 
-
-import { UserProvider } from "./contexts/UserContext";
+// 🔥 FCM 초기화 함수 불러오기
+import { initFCM } from "./fcm";
 
 function App() {
+
+  // 🔥 앱 시작할 때 FCM 초기화
+  useEffect(() => {
+    const token = localStorage.getItem("access_token");
+
+    // 로그인된 상태에서만 initFCM 실행
+    if (token) {
+      initFCM();
+    }
+  }, []);
+
   return (
     <UserProvider>
-      <Router> {/* [수정] Router가 최상위 부모가 됩니다. */}
-        <AuthProvider> {/* [수정] AuthProvider가 Router의 자식이 됩니다. */}
+      <Router>
+        <AuthProvider>
           <Routes>
-             {/* 사용자 조회 페이지 */}
             <Route path="/user" element={<UserInfoPage />} />
             <Route path="/" element={<MainPage />} />
-            <Route path="/login" element={<LoginPage />} /> 
-            <Route path="/signup" element={<SignUpPage />} /> 
-            <Route path="/find-account" element={<FindAccountPage />} /> 
-            <Route path="/device/:id" element={<DeviceViewPage />} /> 
-            <Route path="/history" element={<HistoryPage />} /> 
-            <Route path="/calendar" element={<CalendarPage />} /> 
-            <Route path="/subscription" element={<SubscriptionPage />} /> 
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/find-account" element={<FindAccountPage />} />
+            <Route path="/device/:id" element={<DeviceViewPage />} />
+            <Route path="/history" element={<HistoryPage />} />
+            <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/subscription" element={<SubscriptionPage />} />
             <Route path="/manage" element={<ManagePage />} />
             <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/manage/register-bio" element={<RegisterBioPage />} /> {/* 생체 등록 라우트 */}
+            <Route path="/manage/register-bio" element={<RegisterBioPage />} />
           </Routes>
         </AuthProvider>
-        </Router>
-     </UserProvider>
+      </Router>
+    </UserProvider>
   );
 }
 

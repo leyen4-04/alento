@@ -1,8 +1,8 @@
-// src/page/SignUpPage.tsx
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import '../style/SignUpPage.css';
-import { useAuth } from '../contexts/AuthContext'; // [수정] useAuth 임포트
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+
+import "../style/SignUpPage.css";
+import { useAuth } from "../contexts/AuthContext";
 
 function SignUpPage() {
   const navigate = useNavigate();

@@ -119,3 +119,9 @@
   color: #333;
   margin: 15px 0 0 0;
 }
+
+/* ⭐ 추가된 부분: 일정 있는 날짜 강조 */
+.has-event .date-number {
+  color: red !important;
+  font-weight: 700;
+}
