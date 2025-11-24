@@ -1,0 +1,321 @@
+/* 배경 톤 (manage-container 위에 덮어쓰기) */
+.userinfo-bg {
+  background:
+    radial-gradient(1200px circle at 10% -10%, #e9f0ff 0%, transparent 40%),
+    radial-gradient(1000px circle at 110% 10%, #f6f7fb 0%, transparent 45%),
+    #f3f4f6;
+}
+
+/* 헤더 살짝 iOS스럽게 정리 */
+.userinfo-header {
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+/* 카드 위치/여백 */
+.profile-shell {
+  padding: 18px;
+}
+
+/* 글래스 카드 */
+.profile-card.glass {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 18px 18px 16px;
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+/* 프로필 헤더 */
+.profile-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 4px 14px;
+}
+
+.avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 20px;
+  color: #0f172a;
+
+  background: linear-gradient(145deg, #ffffff, #e9eef7);
+  box-shadow:
+    0 6px 16px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.profile-title h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.profile-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* 정보 리스트 */
+.info-list {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  padding: 8px 10px;
+  border: 1px solid rgba(203, 213, 225, 0.5);
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 6px;
+  font-size: 14px;
+}
+
+.label {
+  color: #475569;
+  font-weight: 600;
+}
+
+.value {
+  color: #0f172a;
+  font-weight: 600;
+  text-align: right;
+  max-width: 70%;
+  word-break: break-word;
+}
+
+.value.muted {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.memo-row .value {
+  font-weight: 500;
+}
+
+/* 구분선 */
+.divider {
+  height: 1px;
+  background: rgba(148, 163, 184, 0.35);
+  margin: 0 6px;
+}
+
+/* 버튼 */
+.profile-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .06s ease, filter .15s ease, background .2s ease;
+}
+
+/* iOS 느낌 primary */
+.btn-primary {
+  border: none;
+  color: white;
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+  filter: brightness(0.96);
+}
+
+/* 로그아웃 = 중립 ghost (빨강 제거) */
+.btn-ghost {
+  background: rgba(255,255,255,0.8);
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  color: #0f172a;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+.btn-ghost:active {
+  transform: translateY(1px);
+  filter: brightness(0.98);
+}
+
+/* 배경 */
+.useredit-bg {
+  background:
+    radial-gradient(1200px circle at 10% -10%, #e9f0ff 0%, transparent 40%),
+    radial-gradient(1000px circle at 110% 10%, #f6f7fb 0%, transparent 45%),
+    #f3f4f6;
+}
+
+/* 헤더 */
+.useredit-header {
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+
+.profile-shell {
+  padding: 18px;
+}
+
+/* 글래스 카드 */
+.profile-card.glass {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 18px 18px 16px;
+  border-radius: 20px;
+
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 10px 30px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255,255,255,0.6);
+}
+
+/* 프로필 헤더 */
+.profile-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 4px 14px;
+}
+
+.avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 20px;
+  color: #0f172a;
+
+  background: linear-gradient(145deg, #ffffff, #e9eef7);
+  box-shadow:
+    0 6px 16px rgba(0,0,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+}
+
+.profile-title h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.profile-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* ✅ 폼 영역 */
+.form-list {
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 14px;
+  padding: 12px;
+  border: 1px solid rgba(203, 213, 225, 0.55);
+}
+
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  margin: 6px 4px;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.6);
+  background: rgba(255,255,255,0.9);
+  padding: 12px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  outline: none;
+  transition: border .2s ease, box-shadow .2s ease;
+}
+
+.form-textarea {
+  resize: vertical;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  border-color: rgba(37, 99, 235, 0.9);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* 버튼 */
+.profile-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.btn {
+  flex: 1;
+  height: 44px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .06s ease, filter .15s ease, background .2s ease;
+}
+
+/* primary */
+.btn-primary {
+  border: none;
+  color: white;
+  background: linear-gradient(180deg, #3b82f6, #2563eb);
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+}
+
+.btn-primary:active {
+  transform: translateY(1px);
+  filter: brightness(0.96);
+}
+
+/* ghost */
+.btn-ghost {
+  background: rgba(255,255,255,0.85);
+  border: 1px solid rgba(148, 163, 184, 0.7);
+  color: #0f172a;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+}
+
+.btn-ghost:active {
+  transform: translateY(1px);
+  filter: brightness(0.98);
+}

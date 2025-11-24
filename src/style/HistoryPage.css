@@ -179,3 +179,160 @@
     inset 0 0 0 1px rgba(255, 255, 255, 0.35);
   transition: all 0.15s ease-out;
 }
+
+
+
+/* ===== 배경 ===== */
+.useredit-bg {
+  background:
+    radial-gradient(900px circle at 0% 0%, #e9f0ff 0%, transparent 45%),
+    radial-gradient(900px circle at 100% 10%, #f7f8fb 0%, transparent 50%),
+    linear-gradient(180deg, #f5f7fb 0%, #eef1f6 100%);
+}
+
+/* ===== 카드 (비슷하지만 다른 글래스) ===== */
+.edit-card.glass-v2 {
+  max-width: 520px;
+  margin: 18px auto 0;
+  padding: 18px;
+  border-radius: 22px;
+
+  background: rgba(255,255,255,0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow:
+    0 14px 35px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255,255,255,0.8);
+}
+
+/* ===== 헤더 영역 ===== */
+.edit-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 2px 2px 14px;
+}
+
+.edit-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #1e293b;
+
+  background: linear-gradient(145deg, #ffffff, #eef2f7);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.08);
+}
+
+.edit-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+}
+
+.edit-sub {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ===== 폼 영역 ===== */
+.edit-form {
+  background: rgba(255,255,255,0.6);
+  border-radius: 16px;
+  padding: 12px;
+  border: 1px solid rgba(203,213,225,0.7);
+  display: grid;
+  gap: 8px;
+}
+
+.edit-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  margin: 6px 4px 2px;
+}
+
+.edit-input,
+.edit-textarea {
+  width: 88%;
+  border-radius: 12px;
+  border: 1px solid rgba(148,163,184,0.6);
+  background: rgba(243,246,251,0.9); /* ✅ 인셋 느낌 */
+  padding: 12px;
+  font-size: 14px;
+  color: #0f172a;
+  outline: none;
+  transition: box-shadow .2s ease, border .2s ease, background .2s ease;
+}
+
+.edit-input {
+  font-weight: 700;
+}
+
+.edit-textarea {
+  resize: vertical;
+  font-weight: 500;
+  line-height: 1.45;
+  min-height: 110px;
+}
+
+/* 포커스 iOS 느낌 */
+.edit-input:focus,
+.edit-textarea:focus {
+  border-color: rgba(59,130,246,0.9);
+  background: rgba(255,255,255,1);
+  box-shadow: 0 0 0 4px rgba(59,130,246,0.12);
+}
+
+/* ===== 버튼 영역 ===== */
+.edit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.btn-v2 {
+  flex: 1;
+  height: 46px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform .06s ease, filter .12s ease, box-shadow .2s ease;
+}
+
+/* Primary: 더 딥한 블루 + 은은한 글로우 */
+.btn-v2.primary {
+  border: none;
+  color: white;
+  background: linear-gradient(180deg, #2f6bff 0%, #1f55e5 100%);
+  box-shadow:
+    0 10px 20px rgba(47,107,255,0.38),
+    inset 0 1px 0 rgba(255,255,255,0.25);
+}
+
+.btn-v2.primary:active {
+  transform: translateY(1px);
+  filter: brightness(0.97);
+}
+
+/* Neutral: 라이트 글래스 느낌 */
+.btn-v2.neutral {
+  background: rgba(255,255,255,0.95);
+  border: 1px solid rgba(148,163,184,0.75);
+  color: #0f172a;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.06);
+}
+
+.btn-v2.neutral:active {
+  transform: translateY(1px);
+  filter: brightness(0.99);
+}

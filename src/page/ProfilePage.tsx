@@ -69,36 +69,44 @@ function ProfilePage() {
         </h1>
       </header>
 
-      <section className="manage-section">
-        <h2 className="section-title">내 정보 수정</h2>
+      <section className="edit-card glass-v2">
+  <div className="edit-head">
+    <div className="edit-badge">✦</div>
+    <div>
+      <h2 className="edit-title">내 정보 수정</h2>
+      <p className="edit-sub">이름과 메모를 바꿀 수 있어요</p>
+    </div>
+  </div>
 
-        <label className="edit-label">이름</label>
-        <input
-          className="modal-input"
-          value={editName}
-          onChange={(e) => setEditName(e.target.value)}
-        />
+  <div className="edit-form">
+    <label className="edit-label">이름</label>
+    <input
+      className="edit-input"
+      value={editName}
+      onChange={(e) => setEditName(e.target.value)}
+      placeholder="이름을 입력하세요"
+    />
 
-        <label className="edit-label">메모</label>
-        <textarea
-          className="modal-textarea"
-          rows={4}
-          value={editMemo}
-          onChange={(e) => setEditMemo(e.target.value)}
-        />
+    <label className="edit-label">메모</label>
+    <textarea
+      className="edit-textarea"
+      value={editMemo}
+      onChange={(e) => setEditMemo(e.target.value)}
+      placeholder="메모를 입력하세요"
+      rows={4}
+    />
+  </div>
 
-        <button className="modal-save" onClick={saveUserInfo}>
-          저장
-        </button>
+  <div className="edit-actions">
+    <button className="btn-v2 primary" onClick={saveUserInfo}>
+      저장
+    </button>
+    <button className="btn-v2 neutral" onClick={logout}>
+      로그아웃
+    </button>
+  </div>
+</section>
 
-        <button
-          onClick={logout}
-          className="modal-save"
-          style={{ backgroundColor: "#ff4d4d", marginTop: "15px" }}
-        >
-          로그아웃
-        </button>
-      </section>
 
       <BottomNav />
     </div>

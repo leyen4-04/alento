@@ -188,21 +188,63 @@ function HistoryPage() {
           </div>
         )}
 
-        {sortedVisits.length > pageSize && (
-          <div className="pagination">
-            {Array.from({ length: totalPages }, (_, idx) => (
-              <span
-                key={idx + 1}
-                className={
-                  idx + 1 === currentPage ? "page-num active" : "page-num"
-                }
-                onClick={() => setCurrentPage(idx + 1)}
-              >
-                {idx + 1}
-              </span>
-            ))}
-          </div>
-        )}
+       {sortedVisits.length > pageSize && (
+  <div className="pagination">
+    {(() => {
+      const groupSize = 5;
+      const currentGroupStart =
+        Math.floor((currentPage - 1) / groupSize) * groupSize + 1;
+      const currentGroupEnd = Math.min(
+        currentGroupStart + groupSize - 1,
+        totalPages
+      );
+
+      const pages = Array.from(
+        { length: currentGroupEnd - currentGroupStart + 1 },
+        (_, i) => currentGroupStart + i
+      );
+
+      const hasPrevGroup = currentGroupStart > 1;
+      const hasNextGroup = currentGroupEnd < totalPages;
+
+      return (
+        <>
+          {/* 이전 묶음 (<) 필요하면 같이 넣음 */}
+          {hasPrevGroup && (
+            <span
+              className="page-num arrow"
+              onClick={() => setCurrentPage(currentGroupStart - 1)}
+            >
+              {"<"}
+            </span>
+          )}
+
+          {/* 현재 묶음 5개 */}
+          {pages.map((p) => (
+            <span
+              key={p}
+              className={p === currentPage ? "page-num active" : "page-num"}
+              onClick={() => setCurrentPage(p)}
+            >
+              {p}
+            </span>
+          ))}
+
+          {/* 다음 묶음 (>) */}
+          {hasNextGroup && (
+            <span
+              className="page-num arrow"
+              onClick={() => setCurrentPage(currentGroupEnd + 1)}
+            >
+              {">"}
+            </span>
+          )}
+        </>
+      );
+    })()}
+  </div>
+)}
+
       </main>
 
       <BottomNav />
