@@ -1,121 +1,104 @@
 // src/api/apiClient.ts
-const BASE_URL = process.env.REACT_APP_API_URL || '';
+const BASE_URL =
+  (import.meta as any).env?.VITE_API_URL ||
+  process.env.REACT_APP_API_URL ||
+  "";
+
+const NGROK_HEADER = { "ngrok-skip-browser-warning": "true" };
 
 function getAuthHeader(): Record<string, string> {
-  const token = localStorage.getItem('access_token');
-
-  if (!token) {
-    // 여기서 {} 를 Record<string, string> 이라고 "우겨" 줌
-    return {} as Record<string, string>;
-  }
-
-  return { Authorization: `Bearer ${token}` };
+  const token = localStorage.getItem("access_token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-// TS에서 Response 타입 시비 안 걸리게 any 사용
-async function handleResponse(res: any) {
-  if (!res.ok) {
-    let message = '요청 중 오류가 발생했습니다.';
-
-    try {
-      const data = await res.json();
-      if (data && data.detail) {
-        if (typeof data.detail === 'string') {
-          message = data.detail;
-        } else if (Array.isArray(data.detail) && data.detail[0]?.msg) {
-          message = data.detail[0].msg;
-        }
-      }
-    } catch {
-      // 응답이 JSON이 아니면 그냥 기본 메시지 사용
-    }
-
-    throw new Error(message);
-  }
-
+async function handleResponse(res: Response) {
   const text = await res.text();
-  if (!text) return null;
 
-  try {
-    return JSON.parse(text);
-  } catch {
-    // 그냥 문자열 응답이면 그대로 반환
-    return text as any;
+  // ✅ ngrok 경고/에러 페이지면 JSON 파싱 금지
+  if (text.startsWith("<!DOCTYPE html") || text.startsWith("<html")) {
+    console.error("HTML 응답 감지:", text);
+    throw new Error("ngrok 경고/에러 페이지가 응답으로 옴. API_URL 확인!");
   }
+
+  let data: any = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = text; // 문자열 응답 허용
+  }
+
+  if (!res.ok) {
+    const message =
+      (data && (data.detail || data.message)) ||
+      "요청 중 오류가 발생했습니다.";
+    throw new Error(
+      typeof message === "string" ? message : JSON.stringify(message)
+    );
+  }
+
+  return data;
 }
 
 export async function get<T>(path: string): Promise<T> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...getAuthHeader(),
-  };
-
   const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'GET',
-    headers,
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...NGROK_HEADER,
+      ...getAuthHeader(),   // ✅ 여기 ... 이 맞음
+    },
   });
-
   return handleResponse(res) as Promise<T>;
 }
 
 export async function postJson<T>(path: string, body: unknown): Promise<T> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...getAuthHeader(),
-  };
-
   const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
-    headers,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...NGROK_HEADER,
+      ...getAuthHeader(),
+    },
     body: JSON.stringify(body),
   });
-
   return handleResponse(res) as Promise<T>;
 }
 
 export async function patchJson<T>(path: string, body: unknown): Promise<T> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...getAuthHeader(),
-  };
-
   const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'PATCH',
-    headers,
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...NGROK_HEADER,
+      ...getAuthHeader(),
+    },
     body: JSON.stringify(body),
   });
-
   return handleResponse(res) as Promise<T>;
 }
 
 export async function del<T>(path: string): Promise<T> {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...getAuthHeader(),
-  };
-
   const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'DELETE',
-    headers,
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      ...NGROK_HEADER,
+      ...getAuthHeader(),
+    },
   });
-
   return handleResponse(res) as Promise<T>;
 }
 
-// src/api/apiClient.ts
-
-// ... (위에 BASE_URL, getAuthHeader, handleResponse, get/postJson/patchJson/del 그대로 두고)
-
-// 🔹 x-www-form-urlencoded로 보내는 POST (로그인 /token 용)
+// 로그인용 form POST
 export async function postForm<T>(path: string, form: URLSearchParams): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+      "Content-Type": "application/x-www-form-urlencoded",
+      ...NGROK_HEADER,
       ...getAuthHeader(),
     },
     body: form.toString(),
   });
-
   return handleResponse(res) as Promise<T>;
 }

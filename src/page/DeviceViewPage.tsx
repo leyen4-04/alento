@@ -59,8 +59,16 @@ export default function DeviceViewPage() {
   const API_URL = process.env.REACT_APP_API_URL;
   const WS_URL = process.env.REACT_APP_WS_URL;
 
+  // ✅ 상대경로 영상 URL 보정(서버가 "/media/xxx.mp4"로 주는 경우 처리)
+  const normalizeUrl = (url: string | null) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;           // 이미 절대경로
+    if (API_URL) return `${API_URL}${url}`;          // 상대경로면 BASE_URL 붙임
+    return url;
+  };
+
   /* =========================================================
-        #1 기록 모드: 방문 기록 로드
+        #1 기록 모드: 방문 기록 로드  (✅ 이거 하나만 유지)
   ========================================================= */
   useEffect(() => {
     if (!isHistoryMode || !visitIdParam) return;
@@ -81,25 +89,37 @@ export default function DeviceViewPage() {
     const loadHistoryData = async () => {
       try {
         // 1) 방문 상세 → 저장된 영상 URL
-        const detail: Visit = await getVisitDetail(visitIdNum);
-        setSavedVideoUrl(detail?.visitor_video_url ?? null);
+        const detail: any = await getVisitDetail(visitIdNum);
+
+        // 백엔드 필드명 변화 대응 + 상대경로 보정
+        const videoUrl =
+          detail?.visitor_video_url ??
+          detail?.video_url ??
+          detail?.visitor_video ??
+          detail?.recorded_video_url ??
+          null;
+
+        console.log("[기록모드] visit detail =", detail);
+        console.log("[기록모드] raw videoUrl =", videoUrl);
+
+        setSavedVideoUrl(normalizeUrl(videoUrl));
 
         // 2) transcript → 저장된 대화
-        const transcript: VisitTranscriptResponse =
-          await getVisitTranscript(visitIdNum);
+        const transcript: any = await getVisitTranscript(visitIdNum);
 
-        // ✅ transcripts가 없거나 다른 키로 와도 안전
-        const list: TranscriptItem[] = Array.isArray(
-          (transcript as any)?.transcripts
-        )
-          ? (transcript as any).transcripts
-          : Array.isArray((transcript as any)?.items)
-          ? (transcript as any).items
+        console.log("[기록모드] transcript raw =", transcript);
+
+        const list: TranscriptItem[] = Array.isArray(transcript?.transcripts)
+          ? transcript.transcripts
+          : Array.isArray(transcript?.items)
+          ? transcript.items
+          : Array.isArray(transcript?.messages)
+          ? transcript.messages
           : [];
 
-        const mappedLogs: ChatMessage[] = list.map((t) => ({
+        const mappedLogs: ChatMessage[] = list.map((t: any) => ({
           speaker: mapSpeaker(t.speaker),
-          text: t.message,
+          text: t.message ?? t.text ?? "",
         }));
 
         setChatMessages(mappedLogs);
@@ -111,7 +131,7 @@ export default function DeviceViewPage() {
     };
 
     loadHistoryData();
-  }, [isHistoryMode, visitIdParam]);
+  }, [isHistoryMode, visitIdParam, API_URL]);
 
   /* =========================================================
         #2 실시간 모드: 기기 정보 로드 (/devices/me)
@@ -144,64 +164,78 @@ export default function DeviceViewPage() {
     };
 
     fetchDevice();
-  }, [isHistoryMode, id]);
+  }, [isHistoryMode, id, API_URL]);
 
   /* =========================================================
         #3 실시간 영상 WebSocket (/ws/stream/{device_uid})
+        (✅ 원래 기록 로드로 중복돼 있던 부분을 진짜 WS로 복구)
   ========================================================= */
   useEffect(() => {
-    if (!isHistoryMode || !visitIdParam) return;
+    if (isHistoryMode) return;
+    if (!deviceUid) return;
 
-    const visitIdNum = Number(visitIdParam);
-    if (isNaN(visitIdNum)) return;
+    const streamUrl = WS_URL
+      ? `${WS_URL}/ws/stream/${deviceUid}`
+      : `ws://${API_URL?.replace(
+          /^https?:\/\//,
+          ""
+        )}/ws/stream/${deviceUid}`;
 
-    const loadHistoryData = async () => {
+    const ws = new WebSocket(streamUrl);
+    ws.binaryType = "blob";
+    videoWsRef.current = ws;
+
+    ws.onopen = () => {
+      setWsError(null);
+      console.log("[실시간 영상] WS 연결됨:", streamUrl);
+    };
+
+    ws.onmessage = (event) => {
       try {
-        // ✅ 1) 방문 상세 (저장된 영상 URL)
-        const detail: any = await getVisitDetail(visitIdNum);
+        // 1) blob(이미지 프레임)로 오는 경우
+        if (event.data instanceof Blob) {
+          const url = URL.createObjectURL(event.data);
 
-        // 백엔드 필드명이 바뀌어도 최대한 잡아줌
-        const videoUrl =
-          detail?.visitor_video_url ??
-          detail?.video_url ??
-          detail?.visitor_video ??
-          detail?.recorded_video_url ??
-          null;
+          if (lastUrlRef.current) URL.revokeObjectURL(lastUrlRef.current);
+          lastUrlRef.current = url;
 
-        console.log("[기록모드] visit detail =", detail);
-        console.log("[기록모드] saved videoUrl =", videoUrl);
+          setVideoSrc(url);
+          return;
+        }
 
-        setSavedVideoUrl(videoUrl);
+        // 2) 문자열(base64)로 오는 경우도 대응
+        if (typeof event.data === "string") {
+          const msg = event.data;
 
-        // ✅ 2) transcript (저장된 대화)
-        const transcript: any = await getVisitTranscript(visitIdNum);
-
-        console.log("[기록모드] transcript raw =", transcript);
-
-        // transcripts / items / messages 등 다양한 키 대응
-        const list: TranscriptItem[] = Array.isArray(transcript?.transcripts)
-          ? transcript.transcripts
-          : Array.isArray(transcript?.items)
-          ? transcript.items
-          : Array.isArray(transcript?.messages)
-          ? transcript.messages
-          : [];
-
-        const mappedLogs = list.map((t: any) => ({
-          speaker: mapSpeaker(t.speaker),
-          text: t.message ?? t.text ?? "",
-        }));
-
-        setChatMessages(mappedLogs);
-      } catch (e) {
-        console.error("[기록 모드] 데이터 불러오기 실패:", e);
-        setSavedVideoUrl(null);
-        setChatMessages([]);
+          if (msg.startsWith("data:image")) {
+            setVideoSrc(msg);
+          } else {
+            // raw base64라면 data url로 래핑
+            setVideoSrc(`data:image/jpeg;base64,${msg}`);
+          }
+        }
+      } catch (err) {
+        console.error("[실시간 영상] 프레임 처리 실패:", err);
       }
     };
 
-    loadHistoryData();
-  }, [isHistoryMode, visitIdParam]);
+    ws.onerror = () => {
+      setWsError("실시간 영상 연결 오류");
+    };
+
+    ws.onclose = () => {
+      console.log("[실시간 영상] WS 종료");
+      videoWsRef.current = null;
+    };
+
+    return () => {
+      ws.close();
+      if (lastUrlRef.current) {
+        URL.revokeObjectURL(lastUrlRef.current);
+        lastUrlRef.current = null;
+      }
+    };
+  }, [isHistoryMode, deviceUid, WS_URL, API_URL]);
 
   /* =========================================================
         #4 실시간 대화 WebSocket
@@ -215,7 +249,10 @@ export default function DeviceViewPage() {
 
     const convUrl = WS_URL
       ? `${WS_URL}/ws/conversation/${deviceUid}`
-      : `ws://${API_URL?.replace(/^https?:\/\//, "")}/ws/conversation/${deviceUid}`;
+      : `ws://${API_URL?.replace(
+          /^https?:\/\//,
+          ""
+        )}/ws/conversation/${deviceUid}`;
 
     const ws = new WebSocket(convUrl);
     conversationWsRef.current = ws;
