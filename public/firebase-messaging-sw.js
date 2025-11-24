@@ -1,17 +1,17 @@
 /* public/firebase-messaging-sw.js */
 
-// firebase v9 compat 사용 (서비스워커에서 제일 안정적)
-importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/9.23.0/firebase-messaging-compat.js");
+// ✅ 서비스워커는 compat가 제일 안정적
+importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js");
+importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js");
 
-// 🔥 너 Firebase 콘솔에서 받은 config 그대로 넣어
+// 🔥🔥🔥 여기 꼭! src/firebase.ts에 있는 "진짜 config" 그대로 복붙
 firebase.initializeApp({
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID",
+  apiKey: "여기_너_진짜_apiKey",
+  authDomain: "여기_너_진짜_authDomain",
+  projectId: "여기_너_진짜_projectId",
+  storageBucket: "여기_너_진짜_storageBucket",
+  messagingSenderId: "여기_너_진짜_messagingSenderId",
+  appId: "여기_너_진짜_appId",
 });
 
 const messaging = firebase.messaging();

@@ -1,37 +1,44 @@
 // src/fcm.ts
-import { getToken, onMessage } from "firebase/messaging";
+import { getToken, onMessage, isSupported } from "firebase/messaging";
 import { messaging } from "./firebase";
 import { apiRequest } from "./api/client";
 
-// 🔥 Firebase 콘솔 Web Push certificate의 VAPID Key 복붙
-const VAPID_KEY = "여기에_너_vapid_key_붙여넣기";
+// ✅ .env에서 VAPID 키 가져오기 (없으면 null 처리)
+const VAPID_KEY =
+  process.env.REACT_APP_FIREBASE_VAPID_KEY?.trim() || "";
+
+/**
+ * VAPID 키가 비어있거나 placeholder면 getToken 호출 자체를 막음
+ * (지금 너 에러 = atob가 한글/빈 문자열을 디코딩하다 터진 거)
+ */
+function isValidVapidKey(key: string) {
+  if (!key) return false;
+  if (key.includes("여기에")) return false; // placeholder 방지
+  return key.length > 20; // 대충 정상 길이 체크
+}
 
 export async function requestFCMToken(): Promise<string | null> {
   try {
-    // 0) ServiceWorker 지원 체크
-    if (!("serviceWorker" in navigator)) {
-      console.warn("🛑 이 브라우저는 ServiceWorker를 지원하지 않습니다.");
+    const supported = await isSupported();
+    if (!supported) {
+      console.log("🛑 이 브라우저는 FCM을 지원하지 않음");
       return null;
     }
 
-    // ✅ 1) 서비스워커를 우리가 직접 등록
-    // public/firebase-messaging-sw.js 가 반드시 있어야 함
-    const registration = await navigator.serviceWorker.register(
-      "/firebase-messaging-sw.js"
-    );
+    if (!isValidVapidKey(VAPID_KEY)) {
+      console.log("🛑 VAPID_KEY가 설정되지 않았습니다. FCM 토큰 발급 스킵");
+      return null;
+    }
 
-    // 2) 브라우저 알림 권한 요청
+    // 1) 브라우저 알림 권한 요청
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
       console.log("🛑 알림 권한 거부됨");
       return null;
     }
 
-    // ✅ 3) FCM 토큰 발급 (등록한 SW를 명시적으로 넘김)
-    const token = await getToken(messaging, {
-      vapidKey: VAPID_KEY,
-      serviceWorkerRegistration: registration,
-    });
+    // 2) FCM 토큰 발급
+    const token = await getToken(messaging, { vapidKey: VAPID_KEY });
 
     if (!token) {
       console.log("🛑 FCM 토큰 발급 실패");
@@ -46,7 +53,7 @@ export async function requestFCMToken(): Promise<string | null> {
   }
 }
 
-// 4) 토큰 FastAPI에 저장
+// 3) 토큰 FastAPI에 저장
 export async function saveTokenToServer(token: string) {
   try {
     await apiRequest("/users/me/push-token", {
@@ -59,14 +66,14 @@ export async function saveTokenToServer(token: string) {
   }
 }
 
-// 5) 전체 초기화 함수 (앱 시작 시 1번 호출)
+// 4) 전체 초기화 함수 (앱 시작 시 1번 호출)
 export async function initFCM() {
   const token = await requestFCMToken();
   if (token) {
     await saveTokenToServer(token);
   }
 
-  // 6) 포그라운드 상태 수신
+  // 5) 포그라운드 상태 수신
   onMessage(messaging, (payload) => {
     console.log("📩 Foreground message:", payload);
 
